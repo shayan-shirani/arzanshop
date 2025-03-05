@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.core.mail import send_mail
 from django.conf import settings
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host='localhost', port=6379, db=1)
 
 def generate_otp():
     return str(random.randint(100000, 999999))

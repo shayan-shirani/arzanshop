@@ -18,7 +18,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 # Create your views here.
 
 from api.utils import *
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host='localhost', port=6379, db=1)
 
 PAYMENT_URL = 'https://panel.aqayepardakht.ir/api/v2/create'
 VERIFY_URL = "https://panel.aqayepardakht.ir/api/v2/verify"

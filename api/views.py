@@ -4,6 +4,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
 from rest_framework.decorators import action
 from .serializers import *
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from rest_framework_simplejwt.tokens import RefreshToken, OutstandingToken, BlacklistedToken
 from rest_framework.response import Response
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -51,28 +53,77 @@ class UserRegistrationAPIView(generics.CreateAPIView):
     queryset = ShopUser.objects.all()
     serializer_class = UserRegistrationSerializer
 
-class AddAddressView(views.APIView):
+class AddressViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    def post(self, request):
-        serializer = AddressSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    def patch(self, request, address_id):
-        try:
-            address = Addresses.objects.get(pk=address_id, user=request.user)
-        except Addresses.DoesNotExist:
-            return Response({'error': 'Address not found'}, status=status.HTTP_404_NOT_FOUND)
+    serializer_class = AddressSerializer
+    queryset = Addresses.objects.all()
 
-        serializer = AddressSerializer(address, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def list(self, request, *args, **kwargs):
+        queryset = Addresses.objects.filter(user=request.user)
+        serializer = AddressSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+            serializer = AddressSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ChangePasswordView(views.APIView):
     permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "old_password": {
+                        "type": "string",
+                        "example": "oldpassword123"
+                    },
+                    "new_password": {
+                        "type": "string",
+                        "example": "newpassword456"
+                    }
+                },
+                "required": ["old_password", "new_password"]
+            },
+            "application/x-www-form-urlencoded": {
+                "type": "object",
+                "properties": {
+                    "old_password": {
+                        "type": "string",
+                        "example": "oldpassword123"
+                    },
+                    "new_password": {
+                        "type": "string",
+                        "example": "newpassword456"
+                    }
+                },
+                "required": ["old_password", "new_password"]
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Password successfully changed",
+                examples=[OpenApiExample(name="Success example", value={"message": "Password changed successfully"})]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Invalid password input or validation failed",
+                examples=[OpenApiExample(name="Error example", value={"error": "Invalid password input"})]
+            ),
+            500: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Failed to blacklist old tokens",
+                examples=[OpenApiExample(name="Error example", value={"error": "Failed to blacklist old tokens"})]
+            ),
+        },
+        summary="Change Password",
+        description="Endpoint for authenticated users to change their password. The user must provide their old and new password."
+    )
     def post(self, request):
         serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -106,6 +157,49 @@ def send_reset_password_email(user, token):
 class PasswordResetRequestView(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "example": "user@example.com"
+                    }
+                },
+                "required": ["email"]
+            },
+            "application/x-www-form-urlencoded": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "example": "user@example.com"
+                    }
+                },
+                "required": ["email"]
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Password reset email sent successfully",
+                examples=[OpenApiExample(name="Success example", value={"message": "Reset password email sent successfully"})]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Invalid email format",
+                examples=[OpenApiExample(name="Error example", value={"error": "Invalid email format"})]
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="User not found",
+                examples=[OpenApiExample(name="Error example", value={"error": "User not found"})]
+            ),
+        },
+        summary="Request Password Reset",
+        description="This endpoint allows users to request a password reset email. The user must provide a valid email address registered in the system."
+    )
     def post(self, request):
         email = request.data.get('email')
         try:
@@ -125,6 +219,56 @@ class PasswordResetRequestView(views.APIView):
 class PasswordResetView(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "new_password": {
+                        "type": "string",
+                        "example": "newpassword123"
+                    },
+                    "new_password_confirm": {
+                        "type": "string",
+                        "example": "newpassword123"
+                    }
+                },
+                "required": ["new_password", "new_password_confirm"]
+            },
+            "application/x-www-form-urlencoded": {
+                "type": "object",
+                "properties": {
+                    "new_password": {
+                        "type": "string",
+                        "example": "newpassword123"
+                    },
+                    "new_password_confirm": {
+                        "type": "string",
+                        "example": "newpassword123"
+                    }
+                },
+                "required": ["new_password", "new_password_confirm"]
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Password reset successfully",
+                examples=[OpenApiExample(name="Success example", value={"message": "Password reset successfully."})]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Invalid request or token issues",
+                examples=[
+                    OpenApiExample(name="Error example (invalid token)", value={"error": "Invalid or expired token."}),
+                    OpenApiExample(name="Error example (password mismatch)", value={"error": "Passwords do not match."}),
+                    OpenApiExample(name="Error example (invalid reset link)", value={"error": "Invalid reset link."}),
+                ]
+            ),
+        },
+        summary="Reset Password",
+        description="This endpoint allows users to reset their password by providing a valid reset link and token."
+    )
     def post(self, request, uidb64, token):
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
@@ -153,6 +297,45 @@ class PasswordResetView(views.APIView):
 class LogoutView(views.APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "refresh": {
+                        "type": "string",
+                        "example": "your_refresh_token_here"
+                    }
+                },
+                "required": ["refresh"]
+            },
+            "application/x-www-form-urlencoded": {
+                "type": "object",
+                "properties": {
+                    "refresh": {
+                        "type": "string",
+                        "example": "your_refresh_token_here"
+                    }
+                },
+                "required": ["refresh"]
+            }
+        },
+        responses={
+            205: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Logout successful",
+                examples=[OpenApiExample(name="Success example", value={"message": "Logout successful!"})]
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Invalid or missing refresh token",
+                examples=[OpenApiExample(name="Error example (missing token)", value={"error": "Refresh token is required"}),
+                          OpenApiExample(name="Error example (invalid token)", value={"error": "Invalid refresh token"})]
+            ),
+        },
+        summary="Logout",
+        description="This endpoint logs the user out by invalidating the provided refresh token."
+    )
     def post(self, request):
         refresh_token = request.data.get("refresh")
         if not refresh_token:
@@ -204,6 +387,41 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
 class LoginRequest(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+    @extend_schema(
+        request={
+            "application/json":{
+                "type":"object",
+                "properties":{
+                    "username":{
+                        "type":"string",
+                        "example":"user@example.com or +989123456789"
+                    }
+                },
+            "required":["username"]
+            },
+            "application/x-www-form-urlencoded":{
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "example": "user@example.com or +989123456789"
+                    }
+                },
+                "required": ["username"]
+            }
+        },
+        responses={
+            200: OpenApiResponse(response=OpenApiTypes.OBJECT,
+                                 description="Successful login request",
+                                 examples=[OpenApiExample(name="Success example",value={"message":"please enter your password", "request_id":"63609e6d-b467-4193-a333-728e71baba75"})]),
+            400: OpenApiResponse(response=OpenApiTypes.OBJECT,
+                                 description="Invalid password",
+                                 examples=[OpenApiExample(name="Error example",value={"Error":"Invalid email or phone number"})]),
+        },
+        summary="Login Request",
+        description="Send an email or phone number, if the user exists, they will receive a response with a request_id."
+                    "If it's an email, they proceed with a password.If it's a phone number, an OTP is sent."
+    )
     def post(self, request):
         username = request.data.get('username')
         regex_email = r'^[a-zA-Z]+([._][a-zA-Z0-9]+)*@[a-zA-Z0-9]+\.[a-zA-Z]{2,}$'
@@ -230,6 +448,48 @@ class LoginRequest(views.APIView):
 class LoginVerify(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+    @extend_schema(
+        request={
+            "application/json":{
+                "type":"object",
+                "properties":{
+                    "request_id":{
+                        "type":"string",
+                        "example":"63609e6d-b467-4193-a333-728e71baba75"
+                    },
+                    "password":{
+                        "type":"string",
+                        "example":"user_password_or_otp"
+                    }
+                },
+            "required":["request_id", "password"]
+            },
+            "application/x-www-form-urlencoded":{
+                "type": "object",
+                "properties":{
+                    "request_id":{
+                        "type":"string",
+                        "example":"63609e6d-b467-4193-a333-728e71baba75"
+                    },
+                    "password":{
+                        "type":"string",
+                        "example":"user_password_or_otp"
+                    }
+                },
+                "required":["request_id", "password"]
+            }
+        },
+        responses={
+            200: OpenApiResponse(response=OpenApiTypes.OBJECT,
+                                 description="Successful login verification",
+                                 examples=[OpenApiExample(name="Success example",value={"refresh": "your_refresh_token","access": "your_access_token"})]),
+            400: OpenApiResponse(response=OpenApiTypes.OBJECT,
+                                 description="Invalid email or phone number",
+                                 examples=[OpenApiExample(name="Error example",value={"Error":"Invalid password"})]),
+        },
+        summary="Login Verification",
+        description="Verify login with password (for email users) or OTP (for phone users). If successful, returns JWT tokens."
+    )
     def post(self, request):
         request_id = request.data.get('request_id')
         stored_email = cache.get(f'user_email:{request_id}')
@@ -284,6 +544,38 @@ class CartViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
     authentication_classes = []
 
+    @extend_schema(
+        summary="Retrieve Cart Details",
+        description="Returns the details of the cart, including items, discounts, and total prices.",
+        responses={
+            200: OpenApiResponse(
+                description="Cart details retrieved successfully",
+                examples=[
+                    OpenApiExample(
+                        name="Cart Example",
+                        value={
+                            "items": [
+                                {
+                                    "product": {
+                                        "id": 1,
+                                        "name": "Product 1",
+                                        "price": 100.0
+                                    },
+                                    "quantity": 2,
+                                    "total_price": 200.0
+                                }
+                            ],
+                            "discount_amount": 10.0,
+                            "discount_code": "SAVE10",
+                            "post_price": 5.0,
+                            "total_price": 200.0,
+                            "final_price": 195.0
+                        }
+                    )
+                ]
+            )
+        }
+    )
     def list(self, request):
         cart = Cart(request)
         cart_items = []
@@ -303,42 +595,120 @@ class CartViewSet(viewsets.ViewSet):
         }
         return Response(cart_details, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Add Product to Cart",
+        description="Adds a product to the cart.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "product": {"type": "integer", "example": 1}
+                },
+                "required": ["product"]
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                description="Product added successfully",
+                examples=[OpenApiExample(name="Success", value={"message": "Product added to cart"})]
+            ),
+            404: OpenApiResponse(description="Product not found")
+        }
+    )
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def add(self, request):
         product_id = request.data.get('product')
         try:
-            product = Product.objects.get(id__in=product_id)
+            product = Product.objects.get(id=product_id)
         except Product.DoesNotExist:
             return Response({"error": "Product does not exist"}, status=status.HTTP_404_NOT_FOUND)
         cart = Cart(request)
         cart.add(product)
         return Response({'message': 'Product added to cart'}, status=status.HTTP_200_OK)
+    @extend_schema(
+        summary="Decrease Product Quantity in Cart",
+        description="Decreases the quantity of a product in the cart.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "product": {"type": "integer", "example": 1}
+                },
+                "required": ["product"]
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Product quantity decreased"),
+            404: OpenApiResponse(description="Product not found")
+        }
+    )
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def decrease(self, request):
         product_id = request.data.get('product')
         try:
-            product = Product.objects.get(id__in=product_id)
+            product = Product.objects.get(id=product_id)
         except Product.DoesNotExist:
             return Response({"error": "Product does not exist"}, status=status.HTTP_404_NOT_FOUND)
         cart = Cart(request)
         cart.decrease(product)
         return Response({"message": "Product decreased"}, status=status.HTTP_200_OK)
+    @extend_schema(
+        summary="Remove Product from Cart",
+        description="Removes a product from the cart.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "product": {"type": "integer", "example": 1}
+                },
+                "required": ["product"]
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Product removed from cart"),
+            404: OpenApiResponse(description="Product not found")
+        }
+    )
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def remove(self, request):
         product_id = request.data.get('product')
         try:
-            product = Product.objects.get(id__in=product_id)
+            product = Product.objects.get(id=product_id)
         except Product.DoesNotExist:
             return Response({"error": "Product does not exist"}, status=status.HTTP_404_NOT_FOUND)
         cart = Cart(request)
         cart.remove(product)
         return Response({"message": "Product removed"}, status=status.HTTP_200_OK)
+    @extend_schema(
+        summary="Clear Cart",
+        description="Clears all items from the cart.",
+        responses={200: OpenApiResponse(description="Cart cleared successfully")}
+    )
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def clear(self,request):
         cart = Cart(request)
         cart.clear()
         return Response({"message": "Cart cleared"}, status=status.HTTP_200_OK)
-
+    @extend_schema(
+        summary="Apply Discount Code",
+        description="Applies a discount code to the cart.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "example": "SAVE10"}
+                },
+                "required": ["code"]
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                description="Discount applied successfully",
+                examples=[OpenApiExample(name="Success", value={"message": "Discount applied", "discount_amount": 10.0})]
+            ),
+            400: OpenApiResponse(description="Invalid discount code")
+        }
+    )
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def apply_discount(self, request):
         code = request.data.get('code')

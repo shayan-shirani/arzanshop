@@ -15,7 +15,7 @@ class CategoryAdmin(MPTTModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['vendor', 'category', 'name', 'created', 'updated']
+    list_display = ['id','vendor', 'category', 'name', 'created', 'updated']
     prepopulated_fields = {'slug': ('name',)}
 
 

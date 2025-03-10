@@ -20,6 +20,7 @@ class Product(models.Model):
     name = models.CharField(max_length=100)
     vendor = models.ForeignKey(VendorProfile, on_delete=models.CASCADE, related_name='products')
     slug = models.SlugField(max_length=100, unique=True)
+    product_picture = models.ImageField(upload_to='product_pictures/', null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     price = models.PositiveIntegerField()
     stock = models.PositiveIntegerField()

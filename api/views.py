@@ -527,9 +527,13 @@ class LoginVerify(views.APIView):
 
 class ProductsViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
-    serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProductFilter
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return ProductCreateSerializer
+        return ProductSerializer
+
 
 class ProductCreateView(generics.CreateAPIView):
     permission_classes = [IsVendor]

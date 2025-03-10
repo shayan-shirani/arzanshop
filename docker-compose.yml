@@ -33,7 +33,6 @@ services:
     networks:
       - mynetwork
 
-
 networks:
   mynetwork:
     driver: bridge

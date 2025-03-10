@@ -92,9 +92,10 @@ class ShopUserSerializer(serializers.ModelSerializer):
 
 class ProductCreateSerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.exclude(parent=None))
+    product_picture = serializers.ImageField(required=False, allow_null=True)
     class Meta:
         model = Product
-        fields = ['category' ,'name', 'description', 'price', 'stock']
+        fields = ['category' ,'name', 'description', 'price', 'stock', 'product_picture']
 
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)

@@ -3,6 +3,8 @@ from accounts.models import ShopUser, Addresses, VendorProfile
 from orders.models import OrderItem, Order
 from shop.models import Product, Category
 from cart.cart import Cart
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
+from drf_spectacular.types import OpenApiTypes
 from django.core.exceptions import ValidationError
 from accounts.models import ShopUser
 from django.contrib.auth.password_validation import validate_password
@@ -16,9 +18,10 @@ class AddressSerializer(serializers.ModelSerializer):
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     addresses = AddressSerializer(many=True, required=False)
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
     class Meta:
         model = ShopUser
-        fields = ('first_name', 'last_name', 'username', 'phone', 'email', 'password', 'addresses')
+        fields = ('first_name', 'last_name', 'username', 'phone', 'email', 'password', 'addresses', 'profile_picture')
         extra_kwargs = {
             'password': {'write_only': True},
         }
@@ -36,8 +39,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         addresses_data = validated_data.pop('addresses', None)
         password = self.validated_data.pop('password')
+        profile_picture = validated_data.pop('profile_picture', None)
         user = ShopUser(**validated_data)
         user.set_password(password)
+        if profile_picture:
+            user.profile_picture = profile_picture
         user.save()
         if addresses_data:
             for address_data in addresses_data:

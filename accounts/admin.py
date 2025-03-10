@@ -8,7 +8,10 @@ class AddressInline(admin.TabularInline):
     extra = 1
     fields = ['street', 'city', 'state', 'country', 'zip_code']
 
-
+@admin.register(Addresses)
+class AddressAdmin(admin.ModelAdmin):
+    model = Addresses
+    list_display = ['id', 'street', 'city', 'state', 'country', 'zip_code']
 
 @admin.register(ShopUser)
 class ShopUserAdmin(UserAdmin):

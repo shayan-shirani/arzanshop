@@ -3,10 +3,8 @@ from accounts.models import ShopUser, Addresses, VendorProfile
 from orders.models import OrderItem, Order
 from shop.models import Product, Category
 from cart.cart import Cart
-from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
-from drf_spectacular.types import OpenApiTypes
+from taggit.serializers import TagListSerializerField, TaggitSerializer
 from django.core.exceptions import ValidationError
-from accounts.models import ShopUser
 from django.contrib.auth.password_validation import validate_password
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
@@ -90,9 +88,10 @@ class ShopUserSerializer(serializers.ModelSerializer):
         model = ShopUser
         fields = ('id', 'first_name')
 
-class ProductCreateSerializer(serializers.ModelSerializer):
+class ProductCreateSerializer(TaggitSerializer,serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.exclude(parent=None))
     product_picture = serializers.ImageField(required=False, allow_null=True)
+    tags = TagListSerializerField()
     class Meta:
         model = Product
         fields = ['category' ,'name', 'description', 'price', 'stock', 'product_picture']

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'mptt',
     'django_filters',
     'drf_spectacular',
+    'taggit',
     'accounts.apps.AccountsConfig',
     'api.apps.ApiConfig',
     'shop.apps.ShopConfig',

@@ -22,7 +22,4 @@ urlpatterns = [
     path('password-reset/<uidb64>/<token>/', api_views.PasswordResetView.as_view(), name='password-reset'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path("logout/", api_views.LogoutView.as_view(), name="logout"),
-    path("create-product/", api_views.ProductCreateView.as_view(), name="create-product"),
-
-
 ]

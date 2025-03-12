@@ -534,16 +534,6 @@ class ProductsViewSet(viewsets.ModelViewSet):
             return ProductCreateSerializer
         return ProductSerializer
 
-
-class ProductCreateView(generics.CreateAPIView):
-    permission_classes = [IsVendor]
-    queryset = Product.objects.all()
-    serializer_class = ProductCreateSerializer
-    def perform_create(self, serializer):
-        user = self.request.user
-        if hasattr(user, 'vendor_profile'):
-            serializer.save(vendor=user.vendor_profile)
-
 class CartViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
     authentication_classes = []

@@ -65,10 +65,12 @@ class CategorySerializer(serializers.ModelSerializer):
         return obj.parent.name if obj.parent else None
 
 class ProductSerializer(serializers.ModelSerializer):
+    tags = TagListSerializerField()
     category = CategorySerializer()
+    product_picture = serializers.ImageField(required=False, allow_null=True)
     class Meta:
         model = Product
-        fields = ['id', 'category' ,'name', 'description', 'price', 'stock']
+        fields = ['id', 'category' ,'name', 'description', 'price', 'stock', 'product_picture', 'tags']
 
 class VendorProductsSerializer(serializers.ModelSerializer):
     products = ProductSerializer(many=True)
@@ -94,7 +96,7 @@ class ProductCreateSerializer(TaggitSerializer,serializers.ModelSerializer):
     tags = TagListSerializerField()
     class Meta:
         model = Product
-        fields = ['category' ,'name', 'description', 'price', 'stock', 'product_picture']
+        fields = ['category' ,'name', 'description', 'price', 'stock', 'product_picture', 'tags']
 
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)

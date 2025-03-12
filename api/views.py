@@ -1,3 +1,4 @@
+from pickle import FALSE
 
 from rest_framework import generics, views, status, viewsets
 from rest_framework.exceptions import PermissionDenied
@@ -363,7 +364,15 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
         if hasattr(user, 'vendor_profile'):
             return Response({'error':'You have already requested a vendor profile'}, status=status.HTTP_400_BAD_REQUEST)
         serializer.save(user=user)
-
+    @extend_schema(
+        request = None,
+        responses ={
+            200:OpenApiResponse(response=OpenApiTypes.OBJECT,description="approve vendor profile",examples=[OpenApiExample(name="reject vendor profile",value={"message":"Vendor profile approved","success":True})]),
+            400:OpenApiResponse(response=OpenApiTypes.OBJECT,description="approve vendor profile",examples=[OpenApiExample(name="reject vendor profile",value={"error":"Vendor profile does not exist","success":False})]),
+        },
+        summary="Approve Vendor",
+        description="Approve a vendor's profile after validation.",
+    )
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def approve(self, request, pk=None):
         try:
@@ -372,7 +381,15 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
             return Response({'message': 'Vendor profile approved'})
         except VendorProfile.DoesNotExist:
             return Response({'error': 'Vendor profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
-
+    @extend_schema(
+        request = None,
+        responses ={
+            200:OpenApiResponse(response=OpenApiTypes.OBJECT,description="reject vendor profile",examples=[OpenApiExample(name="reject vendor profile",value={"message":"Vendor profile rejected","success":True})]),
+            400:OpenApiResponse(response=OpenApiTypes.OBJECT,description="reject vendor profile",examples=[OpenApiExample(name="reject vendor profile",value={"error":"Vendor profile does not exist","success":False})]),
+        },
+        summary="Reject Vendor",
+        description="Reject a vendor's profile after validation.",
+    )
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def reject(self, request, pk=None):
         try:

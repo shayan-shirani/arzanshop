@@ -73,18 +73,18 @@ class Addresses(models.Model):
 
 
 class VendorProfile(models.Model):
-    class STATUS(models.TextChoices):
+    class Status(models.TextChoices):
         PENDING = 'pending', 'Pending'
         APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'
     user = models.OneToOneField(ShopUser, on_delete=models.CASCADE, related_name='vendor_profile')
-    status = models.CharField(max_length=10, choices=STATUS.choices, default=STATUS.PENDING)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     store_name = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=False)
 
     def approve(self):
-        self.status = VendorProfile.STATUS.APPROVED
+        self.status = VendorProfile.Status.APPROVED
         self.is_active = True
         self.store_name = self.store_name
         self.user.role = ShopUser.Roles.VENDOR
@@ -92,7 +92,7 @@ class VendorProfile(models.Model):
         self.save()
 
     def reject(self):
-        self.status = ShopUser.Roles.REJECTED
+        self.status = VendorProfile.Status.REJECTED
         self.save()
 
     def __str__(self):

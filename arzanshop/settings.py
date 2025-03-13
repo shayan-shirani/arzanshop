@@ -84,19 +84,26 @@ WSGI_APPLICATION = 'arzanshop.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgres://arzanshop_user:1234@db:5432/arzanshop')
-url = urlparse(DATABASE_URL)
+# DATABASE_URL = os.getenv('DATABASE_URL', 'postgres://arzanshop_user:1234@db:5432/arzanshop')
+# url = urlparse(DATABASE_URL)
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': url.path[1:],
+#         'USER': url.username,
+#         'PASSWORD': url.password,
+#         'HOST': url.hostname,
+#         'port': url.port,
+#     }
+# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': url.path[1:],
-        'USER': url.username,
-        'PASSWORD': url.password,
-        'HOST': url.hostname,
-        'port': url.port,
+        'NAME': 'arzanshop',
+        'USER': 'arzanshop_user',
+        'PASSWORD': '1234',
     }
 }
-
 
 
 

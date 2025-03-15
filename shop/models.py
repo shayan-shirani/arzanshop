@@ -36,7 +36,7 @@ class Product(models.Model):
 
 
 class Discount(models.Model):
-    product = models.ManyToManyField(Product, related_name='discounts')
+    products = models.ManyToManyField(Product, related_name='discounts')
     code = models.CharField(max_length=50, unique=True)
     value = models.PositiveIntegerField()
     description = models.TextField()

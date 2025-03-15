@@ -1,9 +1,11 @@
 import factory
 from faker import Faker
+from factory.fuzzy import FuzzyDateTime
 from shop.models import Product, Category, Discount
 from accounts.models import VendorProfile, ShopUser, Addresses
-
-
+from orders.models import Order, OrderItem
+from datetime import datetime, timedelta
+from django.utils import timezone
 fake = Faker()
 class ShopUserFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -40,21 +42,27 @@ class VendorProfileFactory(factory.django.DjangoModelFactory):
 class ParentCategoryFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Category
-    name = 'Root Category'
-    slug = 'root-category'
+    name = factory.Faker('word')
+    slug = factory.LazyAttribute(
+        lambda obj: f'{obj.name.lower()}-{fake.uuid4()[:8]}')
+
 
 class CategoryFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Category
-    name = 'Child Category'
-    slug = 'child-category'
+    name = factory.Faker('word')
+    slug = factory.LazyAttribute(
+        lambda obj: f'{obj.name.lower()}-{fake.uuid4()[:8]}')
     parent = factory.SubFactory(ParentCategoryFactory)
 
 class ProductFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Product
+    category = factory.SubFactory(CategoryFactory)
     vendor = factory.SubFactory(VendorProfileFactory)
     name = factory.Faker('name')
+    slug = factory.LazyAttribute(
+        lambda obj: f'{obj.name.lower()}-{fake.uuid4()[:8]}')
     stock = factory.Faker('random_number', digits=3)
     price = factory.Faker('random_number', digits=3)
     description = factory.Faker('text')
@@ -62,9 +70,39 @@ class ProductFactory(factory.django.DjangoModelFactory):
 class DiscountFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Discount
-    product = factory.SubFactory(ProductFactory)
-    code = factory.Faker('pystr', min_chars=5, max_chars=10)
-    discount = factory.Faker('random_number', digits=2)
+        skip_postgeneration_save = True
+    code = factory.Faker('bothify',text='????-########')
+    value = factory.Faker('random_int', min=1, max=100)
     description = factory.Faker('text')
-    start_date = factory.Faker('date')
-    end_date = factory.Faker('date')
+    start_date = factory.LazyFunction(lambda: timezone.now() - timedelta(days=10))
+    end_date = factory.LazyFunction(lambda: timezone.now() + timedelta(days=10))
+
+    @factory.post_generation
+    def products(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for product in extracted:
+                self.products.add(product)
+        else:
+            self.products.add(ProductFactory())
+
+class OrderFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Order
+    first_name = factory.Faker('first_name')
+    last_name = factory.Faker('last_name')
+    phone = factory.LazyAttribute(lambda _: f'09{fake.random_number(digits=9, fix_len=True)}')
+    address = factory.SubFactory(AddressFactory)
+    buyer = factory.SubFactory(ShopUserFactory)
+    transaction_id = factory.Faker('uuid4')
+    paid = False
+
+class OrderItemFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = OrderItem
+    order = factory.SubFactory(OrderFactory)
+    product = factory.SubFactory(ProductFactory)
+    price = factory.Faker('random_number', digits=3)
+    quantity = factory.Faker('random_number', digits=1)
+    weight = factory.Faker('random_number', digits=2)

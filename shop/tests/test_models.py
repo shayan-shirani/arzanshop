@@ -1,7 +1,7 @@
 import pytest
 from .factories import *
 from django.db import IntegrityError, DataError
-from django.core.exceptions import ValidationError
+from django.utils import timezone
 # ---Category Test---
 @pytest.mark.django_db()
 def test_create_category():
@@ -9,8 +9,8 @@ def test_create_category():
     category = CategoryFactory(parent=root_category)
     assert category.parent == root_category
     assert root_category.children.count() == 1
-    assert root_category.name == 'Root Category'
-    assert category.name == 'Child Category'
+    assert root_category.name
+    assert category.name
 
 # ---Product Test---
 @pytest.mark.django_db
@@ -115,3 +115,78 @@ def test_approve_vendor_profile():
     vendor = VendorProfileFactory(user=user, status=VendorProfile.Status.PENDING)
     vendor.reject()
     assert vendor.status == VendorProfile.Status.REJECTED
+
+# --- Order Test ---
+@pytest.mark.django_db
+def test_create_order():
+    address = AddressFactory()
+    buyer = ShopUserFactory()
+    order = OrderFactory(buyer=buyer, address=address)
+    assert order.address == address
+    assert order.buyer == buyer
+    assert order.first_name
+    assert order.last_name
+    assert order.transaction_id
+    assert order.paid == False
+
+@pytest.mark.django_db
+def test_create_order_item():
+    category = CategoryFactory()
+    product = ProductFactory(category=category)
+    order = OrderFactory()
+    order_item = OrderItemFactory(product=product, order=order)
+    assert order_item.product == product
+    assert order_item.order == order
+    assert order_item.quantity
+    assert order_item.price
+
+@pytest.mark.django_db
+def test_create_discount():
+    discount = DiscountFactory()
+    assert Discount.objects.count() == 1
+    assert discount.code is not None
+    assert discount.value > 0
+
+
+@pytest.mark.django_db
+def test_is_valid_discount():
+    now = timezone.now()
+    discount = DiscountFactory(
+        start_date=now - timedelta(days=1),
+        end_date=now + timedelta(days=1),
+        is_active=True,
+    )
+    assert discount.is_valid() is True
+
+
+@pytest.mark.django_db
+def test_expired_discount():
+    now = timezone.now()
+    discount = DiscountFactory(
+        start_date=now - timedelta(days=3),
+        end_date=now - timedelta(days=1),
+        is_active=True,
+    )
+    assert discount.is_valid() is False
+
+
+@pytest.mark.django_db
+def test_inactive_discount():
+    now = timezone.now()
+    discount = DiscountFactory(
+        start_date=now - timedelta(days=1),
+        end_date=now + timedelta(days=1),
+        is_active=False,
+    )
+    assert discount.is_valid() is False
+
+
+@pytest.mark.django_db
+def test_discount_with_multiple_products():
+    product1 = ProductFactory()
+    product2 = ProductFactory()
+    discount = DiscountFactory(products=[product1,product2])
+
+    assert discount.products.count() == 2
+    assert product1 in discount.products.all()
+    assert product2 in discount.products.all()

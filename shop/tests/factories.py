@@ -1,10 +1,9 @@
 import factory
 from faker import Faker
-from factory.fuzzy import FuzzyDateTime
 from shop.models import Product, Category, Discount
 from accounts.models import VendorProfile, ShopUser, Addresses
 from orders.models import Order, OrderItem
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils import timezone
 fake = Faker()
 class ShopUserFactory(factory.django.DjangoModelFactory):

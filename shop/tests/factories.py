@@ -26,7 +26,7 @@ class AddressFactory(factory.django.DjangoModelFactory):
     city = factory.Faker('city')
     state = factory.Faker('state')
     country = factory.Faker('country')
-    zip_code = factory.Faker('zipcode')
+    zip_code = factory.LazyFunction(lambda: int(fake.random_number(digits=5, fix_len=True)))
     is_default = True
 
 

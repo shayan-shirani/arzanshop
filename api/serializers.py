@@ -54,6 +54,9 @@ class VendorProfileSerializer(serializers.ModelSerializer):
         model = VendorProfile
         fields = '__all__'
         read_only_fields = ['is_active','status', 'user']
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return VendorProfile.objects.create(user=user, **validated_data)
 
 class CategorySerializer(serializers.ModelSerializer):
     parent = serializers.SerializerMethodField()

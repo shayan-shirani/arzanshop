@@ -350,7 +350,10 @@ class LogoutView(views.APIView):
 class VendorProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = VendorProfileSerializer
-
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['user'] = self.request.user
+        return context
     def get_queryset(self):
         user = self.request.user
         if user.is_staff or user.is_superuser:

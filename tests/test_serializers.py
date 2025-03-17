@@ -1,6 +1,6 @@
 from api.serializers import *
 import pytest
-from shop.tests.factories import *
+from .factories import *
 from rest_framework.test import APIRequestFactory
 
 @pytest.fixture

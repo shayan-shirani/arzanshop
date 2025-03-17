@@ -2,7 +2,7 @@ import pytest
 from .factories import *
 from django.db import IntegrityError, DataError
 from django.utils import timezone
-# ---Category Test---
+
 @pytest.mark.django_db()
 def test_create_category():
     root_category = ParentCategoryFactory()
@@ -12,7 +12,7 @@ def test_create_category():
     assert root_category.name
     assert category.name
 
-# ---Product Test---
+
 @pytest.mark.django_db
 def test_create_product():
     category = CategoryFactory()
@@ -51,7 +51,7 @@ def test_create_product_with_invalid_weight():
         ProductFactory(weight=-1, category=category, vendor=vendor)
     assert 'shop_product_weight_check' in str(excinfo.value).lower()
 
-# ---ShopUser Test---
+
 @pytest.mark.django_db
 def test_create_shop_user():
     user = ShopUserFactory()
@@ -71,7 +71,7 @@ def test_create_shop_user_with_invalid_phone():
         ShopUserFactory(phone='0913225489789726')
     assert "value too long for type character varying(11)" in str(excinfo.value).lower()
 
-# --- Addresses Test ---
+
 @pytest.mark.django_db
 def test_create_multiple_addresses():
     address1 = AddressFactory()
@@ -85,7 +85,7 @@ def test_create_multiple_addresses():
     assert address2.street
     assert address2.city
 
-# --- VendorProfile Test ---
+
 @pytest.mark.django_db
 def test_create_vendor_profile():
     user = ShopUserFactory(role=ShopUser.Roles.VENDOR)
@@ -116,7 +116,7 @@ def test_approve_vendor_profile():
     vendor.reject()
     assert vendor.status == VendorProfile.Status.REJECTED
 
-# --- Order Test ---
+
 @pytest.mark.django_db
 def test_create_order():
     address = AddressFactory()

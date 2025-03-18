@@ -165,3 +165,19 @@ def test_vendor_profile_serializer(user_factory, api_factory):
     assert vendor.status == VendorProfile.Status.PENDING
     assert vendor.store_name == vendor_data['store_name']
     assert not vendor.is_active
+
+@pytest.mark.django_db
+def test_category_create_serializer():
+    root_category = ParentCategoryFactory()
+    child_category = CategoryFactory(parent=root_category)
+    convert_to_dict = {
+        'parent': {
+            'name':child_category.parent.name
+        },
+        'name':child_category.name,
+    }
+    serializer = CategorySerializer(data=convert_to_dict)
+    assert serializer.is_valid()
+    category = serializer.save()
+    assert child_category.parent.name == convert_to_dict['parent']['name']
+    assert category.name == convert_to_dict['name']

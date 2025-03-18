@@ -3,11 +3,13 @@ from django.utils import timezone
 from mptt.models import MPTTModel, TreeForeignKey
 from accounts.models import VendorProfile
 from taggit.managers import TaggableManager
+from autoslug import AutoSlugField
+from django.utils.text import slugify
 # Create your models here.
 
 class Category(MPTTModel):
     name = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from='name', unique=True)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     class MPTTMeta:
         order_insertion_by = ['name']
@@ -20,7 +22,7 @@ class Category(MPTTModel):
 class Product(models.Model):
     name = models.CharField(max_length=100)
     vendor = models.ForeignKey(VendorProfile, on_delete=models.CASCADE, related_name='products')
-    slug = models.SlugField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from='name', unique=True)
     tags = TaggableManager()
     product_picture = models.ImageField(upload_to='product_pictures/', null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')

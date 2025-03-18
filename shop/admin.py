@@ -10,13 +10,12 @@ from shop.models import Discount
 @admin.register(Category)
 class CategoryAdmin(MPTTModelAdmin):
     list_display = ('name', 'id')
-    prepopulated_fields = {'slug': ('name',)}
+
     mptt_level_indent = 20
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ['id','vendor', 'category', 'name', 'created', 'updated']
-    prepopulated_fields = {'slug': ('name',)}
 
 
 @admin.register(Discount)

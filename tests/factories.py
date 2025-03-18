@@ -42,17 +42,13 @@ class ParentCategoryFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Category
     name = factory.Faker('word')
-    slug = factory.LazyAttribute(
-        lambda obj: f'{obj.name.lower()}-{fake.uuid4()[:8]}')
 
 
 class CategoryFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Category
-    name = factory.Faker('word')
-    slug = factory.LazyAttribute(
-        lambda obj: f'{obj.name.lower()}-{fake.uuid4()[:8]}')
     parent = factory.SubFactory(ParentCategoryFactory)
+    name = factory.Faker('word')
 
 class ProductFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -60,8 +56,6 @@ class ProductFactory(factory.django.DjangoModelFactory):
     category = factory.SubFactory(CategoryFactory)
     vendor = factory.SubFactory(VendorProfileFactory)
     name = factory.Faker('name')
-    slug = factory.LazyAttribute(
-        lambda obj: f'{obj.name.lower()}-{fake.uuid4()[:8]}')
     stock = factory.Faker('random_number', digits=3)
     price = factory.Faker('random_number', digits=3)
     description = factory.Faker('text')
@@ -103,5 +97,5 @@ class OrderItemFactory(factory.django.DjangoModelFactory):
     order = factory.SubFactory(OrderFactory)
     product = factory.SubFactory(ProductFactory)
     price = factory.Faker('random_number', digits=3)
-    quantity = factory.Faker('random_number', digits=1)
+    quantity = factory.Faker('random_number', digits=2)
     weight = factory.Faker('random_number', digits=2)

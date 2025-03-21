@@ -75,11 +75,6 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ['id', 'category' ,'name', 'description', 'price', 'stock', 'product_picture', 'tags']
 
-class VendorProductsSerializer(serializers.ModelSerializer):
-    products = ProductSerializer(many=True)
-    class Meta:
-        model = VendorProfile
-        fields = ['id', 'store_name', 'products']
 
 class ShopUserDetailSerializer(serializers.ModelSerializer):
     addresses = AddressSerializer(many=True)
@@ -100,6 +95,9 @@ class ProductCreateSerializer(TaggitSerializer,serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['category' ,'name', 'description', 'price', 'stock', 'product_picture', 'tags']
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return Product.objects.create(vendor=user.vendor_profile, **validated_data)
 
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)

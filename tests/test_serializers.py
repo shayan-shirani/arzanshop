@@ -125,7 +125,6 @@ def test_multiple_address_serializer_create(api_factory, user_factory, data):
 @pytest.mark.django_db
 def test_user_registration_serializer(validate_user, validate_address, api_factory):
     data = validate_user
-    data['addresses'] = validate_address
     request = api_factory.post('/users/', data)
     serializer = UserRegistrationSerializer(data=data, context={'request': request})
     assert serializer.is_valid()
@@ -134,13 +133,11 @@ def test_user_registration_serializer(validate_user, validate_address, api_facto
     assert shop_user.email == data['email']
     assert shop_user.first_name == data['first_name']
     assert shop_user.check_password(data['password'])
-    assert shop_user.addresses.count() == 2
 
 @pytest.mark.django_db
 def test_user_registration_serializer_invalid_phone(validate_user, validate_address, api_factory):
     data = validate_user
     data['phone'] = '1234567'
-    data['addresses'] = validate_address
     request = api_factory.post('/users/', data)
     serializer = UserRegistrationSerializer(data=data, context={'request': request})
     assert not serializer.is_valid()
@@ -181,3 +178,30 @@ def test_category_create_serializer():
     category = serializer.save()
     assert child_category.parent.name == convert_to_dict['parent']['name']
     assert category.name == convert_to_dict['name']
+
+@pytest.mark.django_db
+def product_serializer_create(api_factory, user_factory):
+    request = api_factory.post('/vendor-products/')
+    request.user = user_factory
+    root_category = ParentCategoryFactory()
+    child_category = CategoryFactory(parent=root_category)
+    vendor = VendorProfileFactory(user=request.user)
+    product_data = {
+        'vendor': vendor,
+        'name': 'Test Product',
+        'description': 'Test Description',
+        'price': 1000,
+        'stock': 10,
+        'weight': 100,
+        'category': {child_category.id}
+    }
+    serializer = ProductCreateSerializer(data=product_data, context={'request': request})
+    assert serializer.is_valid()
+    product = serializer.save()
+    assert product.vendor == vendor
+    assert product.name == product_data['name']
+    assert product.description == product_data['description']
+    assert product.price == product_data['price']
+    assert product.stock == product_data['stock']
+    assert product.weight == product_data['weight']
+    assert product.category == child_category

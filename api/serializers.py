@@ -15,11 +15,10 @@ class AddressSerializer(serializers.ModelSerializer):
         return Addresses.objects.create(user=user, **validated_data)
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    addresses = AddressSerializer(many=True, required=False)
     profile_picture = serializers.ImageField(required=False, allow_null=True)
     class Meta:
         model = ShopUser
-        fields = ('first_name', 'last_name', 'username', 'phone', 'email', 'password', 'addresses', 'profile_picture')
+        fields = ('first_name', 'last_name', 'username', 'phone', 'email', 'password', 'profile_picture')
         extra_kwargs = {
             'password': {'write_only': True},
         }
@@ -35,7 +34,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        addresses_data = validated_data.pop('addresses', None)
         password = self.validated_data.pop('password')
         profile_picture = validated_data.pop('profile_picture', None)
         user = ShopUser(**validated_data)
@@ -43,9 +41,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if profile_picture:
             user.profile_picture = profile_picture
         user.save()
-        if addresses_data:
-            for address_data in addresses_data:
-                Addresses.objects.create(user=user,**address_data)
         return user
 
 
@@ -53,7 +48,12 @@ class VendorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorProfile
         fields = '__all__'
-        read_only_fields = ['is_active','status', 'user']
+        read_only_fields = ['user', 'status', 'is_active']
+    def validate(self, data):
+        user = self.context['request'].user
+        if hasattr(user, 'vendor_profile'):
+            raise ValidationError({'error': 'You have already requested a vendor profile'})
+        return data
     def create(self, validated_data):
         user = self.context['request'].user
         return VendorProfile.objects.create(user=user, **validated_data)

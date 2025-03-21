@@ -26,6 +26,10 @@ VERIFY_URL = "https://panel.aqayepardakht.ir/api/v2/verify"
 AQAYE_PARDAKHT_PIN = 'sandbox'
 class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        return super().get_permissions()
     def get_queryset(self):
         user = self.request.user
         if user.is_staff or user.is_superuser:
@@ -34,7 +38,12 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return ShopUserSerializer
-        return ShopUserDetailSerializer
+        elif self.action == 'create':
+            return UserRegistrationSerializer
+        elif self.action == 'update' or self.action == 'partial_update':
+            return UserRegistrationSerializer
+        else:
+            return ShopUserDetailSerializer
     def perform_update(self, serializer):
         user = self.request.user
         if not user.is_staff and serializer.instance != user:
@@ -360,11 +369,6 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
             return VendorProfile.objects.all()
         return VendorProfile.objects.filter(user=user)
 
-    def perform_create(self, serializer):
-        user = self.request.user
-        if hasattr(user, 'vendor_profile'):
-            return Response({'error':'You have already requested a vendor profile'}, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save(user=user)
     @extend_schema(
         request = None,
         responses ={

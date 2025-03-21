@@ -19,7 +19,7 @@ class ShopUserAdmin(UserAdmin):
     model = ShopUser
     add_form = ShopUserCreationForm
     form = ShopUserChangeForm
-    list_display = ['first_name', 'last_name','username', 'phone','role','is_active', 'is_staff']
+    list_display = ['id','first_name', 'last_name','username', 'phone','role','is_active', 'is_staff']
     fieldsets = (
         (None, {'fields': ('phone', 'password')}),
         ('Personal Info', {'fields': ('first_name', 'last_name', 'username', 'email', 'profile_picture', 'bio')}),

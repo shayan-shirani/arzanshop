@@ -1,7 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views as api_views
-from rest_framework_simplejwt.views import TokenRefreshView
 
 app_name = 'cart'
 router = DefaultRouter()

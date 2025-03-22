@@ -4,7 +4,7 @@ services:
     build:
       context: ./
       dockerfile: DockerFile
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && gunicorn arzanshop.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - .:/app
       - ./media:/app/media
@@ -14,16 +14,16 @@ services:
       - db
       - redis
     environment:
-      - DATABASE_URL=postgres://arzanshop_user:1234@db:5432/arzanshop
-      - REDIS_URL=redis://redis:6379/1
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${DATABASE_URL}
     networks:
       - mynetwork
   db:
     image: postgres:13-alpine
     environment:
-      - POSTGRES_DB=arzanshop
-      - POSTGRES_USER=arzanshop_user
-      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

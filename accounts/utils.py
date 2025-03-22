@@ -1,3 +1,5 @@
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
 import random
 import redis
 from django.core.cache import cache
@@ -5,6 +7,21 @@ from django.core.mail import send_mail
 from django.conf import settings
 
 redis_client = redis.Redis(host='localhost', port=6379, db=1)
+
+def generate_reset_password_token(user):
+    return default_token_generator.make_token(user)
+
+def send_reset_password_email(user, token):
+    uid = urlsafe_base64_encode(str(user.pk).encode())
+    reset_url = f'http://127.0.0.1:8000/api/reset-password/{uid}/{token}'
+    send_mail(
+        subject='Password Reset Request',
+        message=f'Click the link to reset your password: {reset_url}',
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
+
 
 def generate_otp():
     return str(random.randint(100000, 999999))

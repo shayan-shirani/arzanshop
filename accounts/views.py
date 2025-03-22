@@ -94,7 +94,7 @@ class ChangePasswordView(views.APIView):
             ),
             400: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
-                description="Invalid password input or validation failed",
+                description='Invalid password input or validation failed',
                 examples=[OpenApiExample(name='Error example', value={'error': 'Invalid password input'})]
             ),
             500: OpenApiResponse(
@@ -103,8 +103,8 @@ class ChangePasswordView(views.APIView):
                 examples=[OpenApiExample(name='Error example', value={'error': 'Failed to blacklist old tokens'})]
             ),
         },
-        summary="Change Password",
-        description="old and new password required for password change"
+        summary='Change Password',
+        description='old and new password required for password change'
     )
     def post(self, request):
         serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
@@ -180,13 +180,13 @@ class PasswordResetView(views.APIView):
     @extend_schema(
         request={
             'application/json': {
-               ' "type"': 'object',
+               'type': 'object',
                 'properties': {
                     'new_password': {
                         'type': 'string',
                         'example': 'newpassword123'
                     },
-                    "new_password_confirm": {
+                    'new_password_confirm': {
                         'type': 'string',
                         'example': 'newpassword123'
                     }
@@ -243,15 +243,15 @@ class LogoutView(views.APIView):
     permission_classes = [IsAuthenticated]
     @extend_schema(
         request={
-            "application/json": {
-                "type": "object",
-                "properties": {
-                    "refresh": {
-                        "type": "string",
-                        "example": "your_refresh_token_here"
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'refresh': {
+                        'type': 'string',
+                        'example': 'your_refresh_token_here'
                     }
                 },
-                "required": ["refresh"]
+                'required': ['refresh']
             }
         },
         responses={
@@ -329,8 +329,6 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
         except VendorProfile.DoesNotExist:
             return Response({'error': 'Vendor profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-
-
 class LoginRequest(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -345,16 +343,6 @@ class LoginRequest(views.APIView):
                     }
                 },
             'required':['username']
-            },
-            'application/x-www-form-urlencoded':{
-                'type': 'object',
-                'properties': {
-                    'username': {
-                        'type': 'string',
-                        'example': 'user@example.com or +989123456789'
-                    }
-                },
-                'required': ['username']
             }
         },
         responses={
@@ -410,20 +398,6 @@ class LoginVerify(views.APIView):
                     }
                 },
             'required':['request_id', 'password']
-            },
-            'application/x-www-form-urlencoded':{
-                'type': 'object',
-                'properties':{
-                    'request_id':{
-                        'type':'string',
-                        'example':'63609e6d-b467-4193-a333-728e71baba75'
-                    },
-                    'password':{
-                        'type':'string',
-                        'example':'user_password_or_otp'
-                    }
-                },
-                'required':['request_id', 'password']
             }
         },
         responses={

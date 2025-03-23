@@ -1,5 +1,5 @@
 """
-URL configuration for arzanshop project.
+URL configuration for config project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.1/topics/http/urls/
@@ -21,10 +21,10 @@ from django.conf import settings
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 urlpatterns = [
        path('admin/', admin.site.urls),
-       path('api/accounts/', include('accounts.urls', namespace='accounts')),
-       path('api/shop/', include('shop.urls', namespace='shop')),
-       path('api/cart/', include('cart.urls', namespace='cart')),
-       path('api/orders/', include('orders.urls', namespace='orders')),
+       path('api/accounts/', include('apps.accounts.urls', namespace='accounts')),
+       path('api/shop/', include('apps.shop.urls', namespace='shop')),
+       path('api/', include('apps.cart.urls', namespace='cart')),
+       path('api/orders/', include('apps.orders.urls', namespace='orders')),
        path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
        path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
        path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),

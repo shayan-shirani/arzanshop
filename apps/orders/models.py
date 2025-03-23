@@ -1,6 +1,6 @@
 from django.db import models
-from accounts.models import ShopUser, Addresses
-from shop.models import Product
+from apps.accounts.models import ShopUser, Addresses
+from apps.shop.models import Product
 # Create your models here.
 class Order(models.Model):
     buyer = models.ForeignKey(ShopUser, on_delete=models.SET_NULL, related_name='orders_buyer', null=True)

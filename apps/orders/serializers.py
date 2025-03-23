@@ -1,7 +1,6 @@
 from rest_framework import serializers
-from shop.models import Product
 from .models import *
-from cart.cart import Cart
+from apps.cart.cart import Cart
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())

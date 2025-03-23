@@ -1,6 +1,4 @@
-
-
-from shop.models import Product, Discount
+from apps.shop.models import Product, Discount
 
 class Cart:
     def __init__(self, request):
@@ -72,6 +70,7 @@ class Cart:
 
     def get_final_price(self):
         return self.get_total_price() + self.get_post_price() - self.get_discount_amount()
+
     def __len__(self):
         return sum(item['quantity'] for item in self.cart.values())
 

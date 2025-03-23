@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import Category, Product
 from mptt.admin import MPTTModelAdmin
 
-from shop.models import Discount
+from apps.shop.models import Discount
 
 
 # Register your models here.

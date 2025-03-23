@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from taggit.serializers import TagListSerializerField, TaggitSerializer
-from shop.models import Product, Category
+from apps.shop.models import Product, Category
 
 class CategorySerializer(serializers.ModelSerializer):
     parent = serializers.SerializerMethodField()

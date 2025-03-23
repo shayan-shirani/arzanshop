@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from mptt.models import MPTTModel, TreeForeignKey
-from accounts.models import VendorProfile
+from apps.accounts.models import VendorProfile
 from taggit.managers import TaggableManager
 from autoslug import AutoSlugField
 from django.utils.text import slugify

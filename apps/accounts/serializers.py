@@ -1,4 +1,4 @@
-from accounts.models import ShopUser, Addresses, VendorProfile
+from apps.accounts.models import ShopUser, Addresses, VendorProfile
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 from django.contrib.auth.password_validation import validate_password

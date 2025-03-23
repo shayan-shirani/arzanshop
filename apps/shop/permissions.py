@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from accounts.models import ShopUser, VendorProfile
+from apps.accounts.models import ShopUser, VendorProfile
 class IsVendor(permissions.BasePermission):
     def has_permission(self, request, view):
        user = request.user

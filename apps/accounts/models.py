@@ -1,16 +1,18 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
-from django.contrib.auth.models import Group
 # Create your models here.
 class ShopUserManager(BaseUserManager):
     def create_user(self, username, phone, email , password=None, **extra_fields):
         if not username:
             raise ValueError('Users must have an username')
+
         if not phone:
             raise ValueError('Users must have an phone')
+
         if not email:
             raise ValueError('Users must have an email')
+
         email = self.normalize_email(email)
         user = self.model(username=username, phone=phone, email=email, **extra_fields)
         user.set_password(password)
@@ -21,14 +23,17 @@ class ShopUserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
+
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
+
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
+
         if extra_fields.get('is_active') is not True:
             raise ValueError('Superuser must have is_active=True.')
-        return self.create_user(username, phone, email, password, **extra_fields)
 
+        return self.create_user(username, phone, email, password, **extra_fields)
 
 
 class ShopUser(AbstractBaseUser, PermissionsMixin):
@@ -36,12 +41,13 @@ class ShopUser(AbstractBaseUser, PermissionsMixin):
         ADMIN = 'admin', 'Admin'
         VENDOR = 'vendor', 'Vendor'
         Customer = 'customer', 'Customer'
-    role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.Customer)
+
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     username = models.CharField(max_length=50, unique=True)
     phone = models.CharField(max_length=11, unique=True)
     email = models.EmailField(unique=True)
+    role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.Customer)
     profile_picture = models.ImageField(upload_to='profile_picture/%y/%m/%d', null=True, blank=True)
     bio = models.TextField(max_length=500, null=True, blank=True)
     is_staff = models.BooleanField(default=False)
@@ -52,13 +58,13 @@ class ShopUser(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['first_name', 'last_name', 'username', 'phone']
     objects = ShopUserManager()
 
+    def __str__(self):
+        return self.username
+
     class Meta:
         verbose_name = 'Shop User'
         verbose_name_plural = 'Shop Users'
 
-
-    def __str__(self):
-        return self.username
 
 class Addresses(models.Model):
     user = models.ForeignKey(ShopUser, on_delete=models.CASCADE, related_name='addresses')
@@ -68,8 +74,14 @@ class Addresses(models.Model):
     country = models.CharField(max_length=50)
     zip_code = models.IntegerField()
     is_default = models.BooleanField(default=False)
+
     def __str__(self):
         return f'{self.street}, {self.city}, {self.country}'
+
+    class Meta:
+        unique_together = ('user', 'is_default')
+        verbose_name = 'Address'
+        verbose_name_plural = 'Addresses'
 
 
 class VendorProfile(models.Model):
@@ -77,6 +89,7 @@ class VendorProfile(models.Model):
         PENDING = 'pending', 'Pending'
         APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'
+
     user = models.OneToOneField(ShopUser, on_delete=models.CASCADE, related_name='vendor_profile')
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     store_name = models.CharField(max_length=50, unique=True)
@@ -97,3 +110,7 @@ class VendorProfile(models.Model):
 
     def __str__(self):
         return self.store_name if self.store_name else None
+
+    class Meta:
+        verbose_name = 'Vendor Profile'
+        verbose_name_plural = 'Vendor Profiles'

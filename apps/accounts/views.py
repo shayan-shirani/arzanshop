@@ -1,62 +1,59 @@
-from rest_framework import generics, views, status, viewsets
+from rest_framework import viewsets, views, status
+from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
+from .permissions import *
+from rest_framework_simplejwt.exceptions import TokenError
+from django.core.cache import cache
+from rest_framework_simplejwt.tokens import RefreshToken, OutstandingToken, BlacklistedToken
+
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from rest_framework.decorators import action
-from rest_framework_simplejwt.exceptions import TokenError
-from .utils import *
+
+from .selectors.user_selectors import get_all_users, get_user_by_id
+from .selectors.address_selectors import get_all_addresses, get_address_by_user
+from .selectors.password_reset_selectors import get_user_by_email, get_user_by_uidb64
+
+from .services.jwt import JwtService
+from .services.password_reset_services import PasswordResetService
+
+
 import uuid
 import re
-from rest_framework_simplejwt.tokens import RefreshToken, OutstandingToken, BlacklistedToken
-from rest_framework.response import Response
 from .serializers import *
 
 class UserViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
-    def get_permissions(self):
-        if self.action == 'create':
-            return [AllowAny()]
-        return super().get_permissions()
+    permission_classes = [IsUserOrAdmin]
+
     def get_queryset(self):
         user = self.request.user
+
         if user.is_staff or user.is_superuser:
-            return ShopUser.objects.all()
-        return ShopUser.objects.filter(id=user.id)
+            return get_all_users()
+
+        return get_user_by_id(user.id)
+
     def get_serializer_class(self):
         if self.action == 'list':
             return ShopUserSerializer
+
         elif self.action == 'create':
             return UserRegistrationSerializer
-        elif self.action == 'update' or self.action == 'partial_update':
+
+        elif self.action in ['update', 'partial_update']:
             return UserRegistrationSerializer
+
         else:
             return ShopUserDetailSerializer
-    def perform_update(self, serializer):
-        user = self.request.user
-        if not user.is_staff and serializer.instance != user:
-            raise PermissionDenied('You can only update your own account')
-        serializer.save()
-    def perform_destroy(self, instance):
-        user = self.request.user
-        if not user.is_staff and instance != user:
-            raise PermissionDenied('You can only destroy your own account')
-        instance.delete()
 
-
-class UserRegistrationAPIView(generics.CreateAPIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
-    queryset = ShopUser.objects.all()
-    serializer_class = UserRegistrationSerializer
 
 class AddressViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = AddressSerializer
-    queryset = Addresses.objects.all()
+    queryset = get_all_addresses()
 
     def list(self, request, *args, **kwargs):
-        queryset = Addresses.objects.filter(user=request.user)
+        queryset = get_address_by_user(request.user)
         serializer = AddressSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -67,57 +64,25 @@ class AddressViewSet(viewsets.ModelViewSet):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 class ChangePasswordView(views.APIView):
     permission_classes = [IsAuthenticated]
+
     @extend_schema(
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'old_password': {
-                        'type': 'string',
-                        'example': 'oldpassword123'
-                    },
-                    'new_password': {
-                        'type': 'string',
-                        'example': 'newpassword456'
-                    }
-                },
-                'required': ['old_password', 'new_password']
-            }
-        },
+        request=PasswordChangeSerializer,
         responses={
-            200: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='Password successfully changed',
-                examples=[OpenApiExample(name='Success example', value={'message': 'Password changed successfully'})]
-            ),
-            400: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='Invalid password input or validation failed',
-                examples=[OpenApiExample(name='Error example', value={'error': 'Invalid password input'})]
-            ),
-            500: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='Failed to blacklist old tokens',
-                examples=[OpenApiExample(name='Error example', value={'error': 'Failed to blacklist old tokens'})]
-            ),
-        },
-        summary='Change Password',
-        description='old and new password required for password change'
+            200: OpenApiResponse(description='Password changed successfully'),
+            400: OpenApiResponse(description='Passwords do not match'),
+        }
     )
     def post(self, request):
         serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
+
         if serializer.is_valid():
             serializer.update(request.user, serializer.validated_data)
-            try:
-                tokens = OutstandingToken.objects.filter(user=request.user)
-                for token in tokens:
-                    BlacklistedToken.objects.get_or_create(token=token)
-            except Exception:
-                return Response({'error': 'Failed to blacklist old tokens'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-            return Response({'message':'Password changed successfully'}, status=status.HTTP_200_OK)
+            JwtService.token_blacklist(request.user)
+            return Response({'detail':'Password changed successfully'}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -125,118 +90,50 @@ class ChangePasswordView(views.APIView):
 class PasswordResetRequestView(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+
     @extend_schema(
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'email': {
-                        'type': 'string',
-                        'example': 'user@example.com'
-                    }
-                },
-                'required': ['email']
-            }
-        },
+        request=PasswordResetRequestSerializer,
         responses={
-            200: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='Password reset email sent successfully',
-                examples=[OpenApiExample(name='Success example', value={'message': 'Reset password email sent successfully'})]
-            ),
-            400: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='Invalid email format',
-                examples=[OpenApiExample(name='Error example', value={'error': 'Invalid email format'})]
-            ),
-            404: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='User not found',
-                examples=[OpenApiExample(name='Error example', value={'error': 'User not found'})]
-            ),
-        },
-        summary='Request Password Reset',
-        description='Username required for reset password request',
+            200: OpenApiResponse(description='Reset password email sent successfully'),
+            400: OpenApiResponse(description='User not found')
+        }
     )
     def post(self, request):
         email = request.data.get('email')
         try:
-            user = ShopUser.objects.get(email=email)
+            user = get_user_by_email(email)
         except ShopUser.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        token = generate_reset_password_token(user)
+        token = PasswordResetService.generate_reset_password_token(user)
         cache.delete(f'reset_password_token:{user.pk}')
         cache.set(f'reset_password_token:{user.pk}', token, timeout=3600)
 
-        send_reset_password_email(user, token)
+        PasswordResetService.send_reset_password_email(user, token)
 
-        return Response({'message': 'Reset password email sent successfully'}, status=status.HTTP_200_OK)
+        return Response({'detail': 'Reset password email sent successfully'}, status=status.HTTP_200_OK)
 
 
 class PasswordResetView(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
-    @extend_schema(
-        request={
-            'application/json': {
-               'type': 'object',
-                'properties': {
-                    'new_password': {
-                        'type': 'string',
-                        'example': 'newpassword123'
-                    },
-                    'new_password_confirm': {
-                        'type': 'string',
-                        'example': 'newpassword123'
-                    }
-                },
-                'required': ['new_password', 'new_password_confirm']
-            }
-        },
-        responses={
-            200: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='Password reset successfully',
-                examples=[OpenApiExample(name='Success example', value={'message': 'Password reset successfully.'})]
-            ),
-            400: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='Invalid request or token issues',
-                examples=[
-                    OpenApiExample(name='Error example (invalid token)', value={'error': 'Invalid or expired token.'}),
-                    OpenApiExample(name='Error example (password mismatch)', value={'error': 'Passwords do not match.'}),
-                    OpenApiExample(name='Error example (invalid reset link)', value={'error': 'Invalid reset link.'}),
-                ]
-            ),
-        },
-        summary='Reset Password',
-        description='request id and password required for reset password',
-    )
-    def post(self, request, uidb64, token):
-        try:
-            uid = urlsafe_base64_decode(uidb64).decode()
-            user = ShopUser.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, ShopUser.DoesNotExist):
-            return Response({'error': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
 
+    def post(self, request, uidb64, token):
+        user = get_user_by_uidb64(uidb64)
         stored_token = cache.get(f'reset_password_token:{user.pk}')
 
         if not stored_token or stored_token != token:
-            return Response({'error': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        new_password = request.data.get('new_password')
-        new_password_confirm = request.data.get('new_password_confirm')
+        serializer = PasswordResetSerializer(data=request.data)
 
-        if new_password != new_password_confirm:
-            return Response({'error': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.set_password(new_password)
-        user.save()
+        if serializer.is_valid():
+            serializer.update(user, serializer.validated_data)
+            JwtService.token_blacklist(user)
 
         cache.delete(f'password_reset_token:{user.pk}')
 
-        return Response({'message': 'Password reset successfully.'}, status=status.HTTP_200_OK)
+        return Response({'detail': 'Password reset successfully.'}, status=status.HTTP_200_OK)
 
 
 class LogoutView(views.APIView):

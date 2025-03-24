@@ -33,8 +33,10 @@ class CartSerializer(serializers.Serializer):
             'final_price': instance.get_final_price()
         }
 
+
 class CartActionSerializer(serializers.Serializer):
     product = serializers.IntegerField()
+
 
 class DiscountSerializer(serializers.Serializer):
     code = serializers.CharField()

@@ -37,13 +37,12 @@ class Cart:
         try:
             discount = Discount.objects.get(code=code)
         except Discount.DoesNotExist:
-            return {'message': 'Invalid discount code'}
-
+            return {'detail': 'Invalid discount code'}
         if not discount.is_valid():
-            return {'message': 'This discount code has expired'}
+            return {'detail': 'This discount code has expired'}
         self.session['discount_code'] = code
         self.save()
-        return {'message': 'discount code Successfully applied'}
+        return {'detail': 'discount code Successfully applied'}
 
     def get_discount_amount(self):
         code = self.session.get('discount_code')

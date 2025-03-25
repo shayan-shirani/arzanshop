@@ -1,13 +1,9 @@
-from logging import exception
-
 from rest_framework import viewsets, views, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
-from .permissions import *
 from rest_framework_simplejwt.exceptions import TokenError
 from django.core.cache import cache
-from rest_framework_simplejwt.tokens import RefreshToken, OutstandingToken, BlacklistedToken
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
@@ -21,9 +17,7 @@ from .services.jwt import JwtService
 from .services.password_reset_services import PasswordResetService
 from .services.login_services import validate_username, generate_request_id
 
-
-import uuid
-import re
+from .permissions import *
 from .serializers import *
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -54,19 +48,33 @@ class UserViewSet(viewsets.ModelViewSet):
 class AddressViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = AddressSerializer
-    queryset = get_all_addresses()
+
+    def get_queryset(self):
+        return get_address_by_user(self.request.user)
 
     def list(self, request, *args, **kwargs):
-        queryset = get_address_by_user(request.user)
+        queryset = self.get_queryset()
         serializer = AddressSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-            serializer = AddressSerializer(data=request.data, context={'request': request})
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = AddressSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
 
 
 
@@ -81,14 +89,24 @@ class ChangePasswordView(views.APIView):
         }
     )
     def post(self, request):
-        serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
+        serializer = PasswordChangeSerializer(
+            data=request.data,
+            context={'request': request}
+        )
 
         if serializer.is_valid():
             serializer.update(request.user, serializer.validated_data)
             JwtService.token_blacklist(request.user)
-            return Response({'detail':'Password changed successfully'}, status=status.HTTP_200_OK)
+            return Response(
+                {'detail': 'Password changed successfully'},
+                status=status.HTTP_200_OK
+            )
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
 
 
 class PasswordResetRequestView(views.APIView):
@@ -104,10 +122,20 @@ class PasswordResetRequestView(views.APIView):
     )
     def post(self, request):
         email = request.data.get('email')
+
+        if not email:
+            return Response(
+                {'detail': 'Email is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             user = get_user_by_email(email)
         except ShopUser.DoesNotExist:
-            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'detail': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         token = PasswordResetService.generate_reset_password_token(user)
         cache.delete(f'reset_password_token:{user.pk}')
@@ -115,7 +143,11 @@ class PasswordResetRequestView(views.APIView):
 
         PasswordResetService.send_reset_password_email(user, token)
 
-        return Response({'detail': 'Reset password email sent successfully'}, status=status.HTTP_200_OK)
+        return Response(
+            {'detail': 'Reset password email sent successfully'},
+            status=status.HTTP_200_OK
+        )
+
 
 
 class PasswordResetView(views.APIView):
@@ -123,11 +155,20 @@ class PasswordResetView(views.APIView):
     authentication_classes = []
 
     def post(self, request, uidb64, token):
-        user = get_user_by_uidb64(uidb64)
+        try:
+            user = get_user_by_uidb64(uidb64)
+        except (TypeError, ValueError, OverflowError, ShopUser.DoesNotExist):
+            raise ValueError(
+                "Invalid UID or user not found."
+            )
+
         stored_token = cache.get(f'reset_password_token:{user.pk}')
 
         if not stored_token or stored_token != token:
-            return Response({'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Invalid or expired token.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer = PasswordResetSerializer(data=request.data)
 
@@ -136,8 +177,11 @@ class PasswordResetView(views.APIView):
             JwtService.token_blacklist(user)
 
         cache.delete(f'password_reset_token:{user.pk}')
+        return Response(
+            {'detail': 'Password reset successfully.'},
+            status=status.HTTP_200_OK
+        )
 
-        return Response({'detail': 'Password reset successfully.'}, status=status.HTTP_200_OK)
 
 
 class LogoutView(views.APIView):
@@ -147,13 +191,23 @@ class LogoutView(views.APIView):
         refresh_token = request.data.get('refresh')
 
         if not refresh_token:
-            return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Refresh token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             JwtService.logout(refresh_token)
-            return Response({'message': 'Logout successful!'}, status=status.HTTP_205_RESET_CONTENT)
+            return Response(
+                {'message': 'Logout successful!'},
+                status=status.HTTP_205_RESET_CONTENT
+            )
         except TokenError:
-            return Response({'error': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Invalid refresh token'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 
 class VendorProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -177,18 +231,30 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
         try:
             vendor = get_vendor_by_pk_status(pk, 'pending')
             vendor.approve()
-            return Response({'message': 'Vendor profile approved'})
+            return Response(
+                {'message': 'Vendor profile approved'}
+            )
         except VendorProfile.DoesNotExist:
-            return Response({'error': 'Vendor profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'Vendor profile does not exist'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def reject(self, request, pk=None):
         try:
             vendor = get_vendor_by_pk_status(pk, 'pending')
             vendor.reject()
-            return Response({'message': 'Vendor profile rejected'}, status=status.HTTP_200_OK)
+            return Response(
+                {'message': 'Vendor profile rejected'},
+                status=status.HTTP_200_OK
+            )
         except VendorProfile.DoesNotExist:
-            return Response({'error': 'Vendor profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'Vendor profile does not exist'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class LoginRequest(views.APIView):
     permission_classes = [AllowAny]
@@ -197,7 +263,6 @@ class LoginRequest(views.APIView):
     @extend_schema(request=LoginSerializer)
     def post(self, request):
         username = request.data.get('username')
-        pass_service = PasswordResetService()
         username_type = validate_username(username)
         request_id = generate_request_id()
 
@@ -205,7 +270,10 @@ class LoginRequest(views.APIView):
             try:
                 user = get_user_by_email(username)
                 cache.set(f'user_email:{request_id}', username, timeout=300)
-                return Response({'message': 'Please enter your password', 'request_id':request_id}, status=status.HTTP_200_OK)
+                return Response(
+                    {'message': 'Please enter your password', 'request_id': request_id},
+                    status=status.HTTP_200_OK
+                )
             except ShopUser.DoesNotExist:
                 return Response({'error': 'Invalid email'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -214,10 +282,12 @@ class LoginRequest(views.APIView):
                 user = get_user_by_phone(username)
                 cache.set(f'user_phone:{request_id}', username, timeout=300)
                 PasswordResetService.send_otp(user.phone, user.email)
-                return Response({'message': 'OTP has been sent to your email', 'request_id':request_id}, status=status.HTTP_200_OK)
+                return Response(
+                    {'message': 'OTP has been sent to your email', 'request_id': request_id},
+                    status=status.HTTP_200_OK
+                )
             except ShopUser.DoesNotExist:
                 return Response({'error': 'Invalid phone number'}, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 class LoginVerify(views.APIView):
@@ -230,6 +300,7 @@ class LoginVerify(views.APIView):
         stored_email = cache.get(f'user_email:{request_id}')
         stored_phone = cache.get(f'user_phone:{request_id}')
         password = request.data.get('password')
+
         if stored_email:
             try:
                 user = ShopUser.objects.get(email=stored_email)

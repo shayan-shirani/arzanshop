@@ -1,4 +1,4 @@
-from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken
+from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken, RefreshToken
 
 class JwtService:
     @staticmethod
@@ -9,3 +9,16 @@ class JwtService:
                 BlacklistedToken.objects.get_or_create(token=token)
         except Exception as e:
             return {'detail': str(e)}
+
+    @staticmethod
+    def logout(refresh_token):
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+
+    @staticmethod
+    def generate_token(user):
+        refresh = RefreshToken.for_user(user)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }

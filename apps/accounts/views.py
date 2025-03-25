@@ -1,3 +1,5 @@
+from logging import exception
+
 from rest_framework import viewsets, views, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -10,12 +12,14 @@ from rest_framework_simplejwt.tokens import RefreshToken, OutstandingToken, Blac
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 
-from .selectors.user_selectors import get_all_users, get_user_by_id
+from .selectors.user_selectors import get_all_users, get_user_by_id, get_user_by_phone, get_user_by_email
 from .selectors.address_selectors import get_all_addresses, get_address_by_user
 from .selectors.password_reset_selectors import get_user_by_email, get_user_by_uidb64
+from .selectors.vendor_selectors import get_all_vendors, get_vendor_by_user, get_vendor_by_pk_status
 
 from .services.jwt import JwtService
 from .services.password_reset_services import PasswordResetService
+from .services.login_services import validate_username, generate_request_id
 
 
 import uuid
@@ -138,43 +142,15 @@ class PasswordResetView(views.APIView):
 
 class LogoutView(views.APIView):
     permission_classes = [IsAuthenticated]
-    @extend_schema(
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'refresh': {
-                        'type': 'string',
-                        'example': 'your_refresh_token_here'
-                    }
-                },
-                'required': ['refresh']
-            }
-        },
-        responses={
-            205: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='Logout successful',
-                examples=[OpenApiExample(name='Success example', value={'message': 'Logout successful!'})]
-            ),
-            400: OpenApiResponse(
-                response=OpenApiTypes.OBJECT,
-                description='Invalid or missing refresh token',
-                examples=[OpenApiExample(name='Error example (missing token)', value={'error': 'Refresh token is required'}),
-                          OpenApiExample(name='Error example (invalid token)', value={'error': 'Invalid refresh token'})]
-            ),
-        },
-        summary='Logout',
-        description='Log out by invalidating the refresh token.'
-    )
+
     def post(self, request):
         refresh_token = request.data.get('refresh')
+
         if not refresh_token:
             return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+            JwtService.logout(refresh_token)
             return Response({'message': 'Logout successful!'}, status=status.HTTP_205_RESET_CONTENT)
         except TokenError:
             return Response({'error': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
@@ -182,45 +158,33 @@ class LogoutView(views.APIView):
 class VendorProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = VendorProfileSerializer
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['user'] = self.request.user
         return context
+
     def get_queryset(self):
         user = self.request.user
+
         if user.is_staff or user.is_superuser:
-            return VendorProfile.objects.all()
-        return VendorProfile.objects.filter(user=user)
-    @extend_schema(
-        request = None,
-        responses ={
-            200:OpenApiResponse(response=OpenApiTypes.OBJECT,description='approve vendor profile',examples=[OpenApiExample(name='reject vendor profile',value={'message':'Vendor profile approved','success':True})]),
-            400:OpenApiResponse(response=OpenApiTypes.OBJECT,description='approve vendor profile',examples=[OpenApiExample(name='reject vendor profile',value={'error':'Vendor profile does not exist','success':False})]),
-        },
-        summary='Approve Vendor',
-        description='Approve a vendor profile after validation.',
-    )
+            return get_all_vendors()
+
+        return get_vendor_by_user(user)
+
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def approve(self, request, pk=None):
         try:
-            vendor = VendorProfile.objects.get(pk=pk, status='pending')
+            vendor = get_vendor_by_pk_status(pk, 'pending')
             vendor.approve()
             return Response({'message': 'Vendor profile approved'})
         except VendorProfile.DoesNotExist:
             return Response({'error': 'Vendor profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
-    @extend_schema(
-        request = None,
-        responses ={
-            200:OpenApiResponse(response=OpenApiTypes.OBJECT,description='reject vendor profile',examples=[OpenApiExample(name='reject vendor profile',value={'message':'Vendor profile rejected','success':True})]),
-            400:OpenApiResponse(response=OpenApiTypes.OBJECT,description='reject vendor profile',examples=[OpenApiExample(name='reject vendor profile',value={'error':'Vendor profile does not exist','success':False})]),
-        },
-        summary='Reject Vendor',
-        description='Reject a vendor profile after validation.',
-    )
+
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def reject(self, request, pk=None):
         try:
-            vendor = VendorProfile.objects.get(pk=pk, status='pending')
+            vendor = get_vendor_by_pk_status(pk, 'pending')
             vendor.reject()
             return Response({'message': 'Vendor profile rejected'}, status=status.HTTP_200_OK)
         except VendorProfile.DoesNotExist:
@@ -229,85 +193,38 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
 class LoginRequest(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
-    @extend_schema(
-        request={
-            'application/json':{
-                'type':'object',
-                'properties':{
-                    'username':{
-                        'type':'string',
-                        'example':'user@example.com or +989123456789'
-                    }
-                },
-            'required':['username']
-            }
-        },
-        responses={
-            200: OpenApiResponse(response=OpenApiTypes.OBJECT,
-                                 description='Successful login request',
-                                 examples=[OpenApiExample(name='Success example',value={'message':'please enter your password', 'request_id':'63609e6d-b467-4193-a333-728e71baba75'})]),
-            400: OpenApiResponse(response=OpenApiTypes.OBJECT,
-                                 description='Invalid password',
-                                 examples=[OpenApiExample(name='Error example',value={'Error':'Invalid email or phone number'})]),
-        },
-        summary='Login Request',
-        description='Send an email or phone number, if the user exists, they will receive a response with a request_id.'
-                    'If it is an email, they proceed with a password.If it is a phone number, an OTP is sent.'
-    )
+
+    @extend_schema(request=LoginSerializer)
     def post(self, request):
         username = request.data.get('username')
-        regex_email = r'^[a-zA-Z]+([._][a-zA-Z0-9]+)*@[a-zA-Z0-9]+\.[a-zA-Z]{2,}$'
-        regex_phone = r'^(\+98|98|0)9\d{9}$'
-        is_email = re.match(regex_email, username)
-        is_phone = re.match(regex_phone, username)
-        request_id = uuid.uuid4()
-        if is_email:
+        pass_service = PasswordResetService()
+        username_type = validate_username(username)
+        request_id = generate_request_id()
+
+        if username_type == 'email':
             try:
-                user = ShopUser.objects.get(email=username)
+                user = get_user_by_email(username)
                 cache.set(f'user_email:{request_id}', username, timeout=300)
                 return Response({'message': 'Please enter your password', 'request_id':request_id}, status=status.HTTP_200_OK)
             except ShopUser.DoesNotExist:
                 return Response({'error': 'Invalid email'}, status=status.HTTP_400_BAD_REQUEST)
-        elif is_phone:
+
+        elif username_type == 'phone':
             try:
-                user = ShopUser.objects.get(phone=username)
+                user = get_user_by_phone(username)
                 cache.set(f'user_phone:{request_id}', username, timeout=300)
-                send_otp(user.phone, username)
+                PasswordResetService.send_otp(user.phone, user.email)
                 return Response({'message': 'OTP has been sent to your email', 'request_id':request_id}, status=status.HTTP_200_OK)
             except ShopUser.DoesNotExist:
                 return Response({'error': 'Invalid phone number'}, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 class LoginVerify(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
-    @extend_schema(
-        request={
-            'application/json':{
-                'type':'object',
-                'properties':{
-                    'request_id':{
-                        'type':'string',
-                        'example':'63609e6d-b467-4193-a333-728e71baba75'
-                    },
-                    'password':{
-                        'type':'string',
-                        'example':'user_password_or_otp'
-                    }
-                },
-            'required':['request_id', 'password']
-            }
-        },
-        responses={
-            200: OpenApiResponse(response=OpenApiTypes.OBJECT,
-                                 description='Successful login verification',
-                                 examples=[OpenApiExample(name='Success example',value={'refresh': 'your_refresh_token','access': 'your_access_token'})]),
-            400: OpenApiResponse(response=OpenApiTypes.OBJECT,
-                                 description='Invalid email or phone number',
-                                 examples=[OpenApiExample(name='Error example',value={'Error':'Invalid password'})]),
-        },
-        summary='Login Verification',
-        description='Verify login with password (for email users) or OTP (for phone users). If successful, returns JWT tokens.'
-    )
+
+    @extend_schema(request=LoginVerifySerializer)
     def post(self, request):
         request_id = request.data.get('request_id')
         stored_email = cache.get(f'user_email:{request_id}')
@@ -316,26 +233,24 @@ class LoginVerify(views.APIView):
         if stored_email:
             try:
                 user = ShopUser.objects.get(email=stored_email)
+
                 if user.check_password(password):
-                    refresh_token = RefreshToken.for_user(user)
-                    return Response({
-                        'refresh': str(refresh_token),
-                        'access': str(refresh_token.access_token)
-                    })
+                    return Response(JwtService.generate_token(user))
+
             except ShopUser.DoesNotExist:
                 return Response({'error': 'Invalid password'}, status=status.HTTP_400_BAD_REQUEST)
+
         elif stored_phone:
             try:
-                password = request.data.get('password')
-                user = ShopUser.objects.get(phone=stored_phone)
+                user = get_user_by_phone(stored_phone)
                 stored_otp = cache.get(f'otp:{stored_phone}')
+
                 if stored_otp != password:
                     return Response({'error': 'Invalid otp'}, status=status.HTTP_400_BAD_REQUEST)
-                refresh_token = RefreshToken.for_user(user)
-                return Response({
-                    'refresh': str(refresh_token),
-                    'access': str(refresh_token.access_token)
-                })
+
+                return Response(JwtService.generate_token(user))
+
             except ShopUser.DoesNotExist:
                 return Response({'error': 'Invalid otp'}, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({'error': 'Invalid email or phone'}, status=status.HTTP_400_BAD_REQUEST)

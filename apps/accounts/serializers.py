@@ -82,6 +82,15 @@ class ShopUserSerializer(serializers.ModelSerializer):
         fields = ('id', 'first_name')
 
 
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+
+
+class LoginVerifySerializer(serializers.Serializer):
+    request_id = serializers.UUIDField(required=True)
+    password = serializers.CharField(required=True)
+
+
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)
     new_password = serializers.CharField(required=True, write_only=True, validators=[validate_password])

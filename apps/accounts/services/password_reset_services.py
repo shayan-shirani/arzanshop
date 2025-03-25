@@ -28,17 +28,14 @@ class PasswordResetService:
         )
 
     @staticmethod
-    def generate_otp():
-        return str(random.randint(100000, 999999))
-
-    def send_otp(self, phone, email):
-        otp = self.generate_otp()
+    def send_otp(phone, email):
+        otp = str(random.randint(100000, 999999))
         cache.set(f'otp:{phone}', otp, timeout=300)
         send_mail(
-            subject="Your OTP Code",
-            message=f"Your OTP is: {otp}. It is valid for 5 minutes.",
+            subject='Your OTP Code',
+            message=f'Your OTP is: {otp}. It is valid for 5 minutes.',
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],  # Send to the user's email
+            recipient_list=[email],
             fail_silently=False,
         )
         return otp

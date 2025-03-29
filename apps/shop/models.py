@@ -1,21 +1,24 @@
 from django.db import models
 from django.utils import timezone
+
 from mptt.models import MPTTModel, TreeForeignKey
-from apps.accounts.models import VendorProfile
 from taggit.managers import TaggableManager
 from autoslug import AutoSlugField
-from django.utils.text import slugify
-# Create your models here.
+
+from apps.accounts.models import VendorProfile
 
 class Category(MPTTModel):
     name = models.CharField(max_length=100)
     slug = AutoSlugField(populate_from='name', unique=True)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+
     class MPTTMeta:
         order_insertion_by = ['name']
+
     class Meta:
         verbose_name = 'Category'
         verbose_name_plural = 'Categories'
+
     def __str__(self):
         return " → ".join(self.get_ancestors(include_self=True).values_list('name', flat=True))
 

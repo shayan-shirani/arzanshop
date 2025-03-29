@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.orders.models import Order, OrderItem
+from apps.orders.models import Order, OrderItem, Subscription
 
 
 # Register your models here.
@@ -11,4 +11,8 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
     pass

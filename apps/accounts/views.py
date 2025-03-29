@@ -8,9 +8,8 @@ from django.core.cache import cache
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 
-from .selectors.user_selectors import get_all_users, get_user_by_id, get_user_by_phone, get_user_by_email
+from .selectors.user_selectors import get_all_users, get_user_by_id, get_user_by_phone, get_user_by_email, get_user_by_uidb64
 from .selectors.address_selectors import get_all_addresses, get_address_by_user
-from .selectors.password_reset_selectors import get_user_by_email, get_user_by_uidb64
 from .selectors.vendor_selectors import get_all_vendors, get_vendor_by_user, get_vendor_by_pk_status
 
 from .services.jwt import JwtService

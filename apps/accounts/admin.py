@@ -22,14 +22,14 @@ class ShopUserAdmin(UserAdmin):
     list_display = ['id','first_name', 'last_name','username', 'phone','role','is_active', 'is_staff']
     fieldsets = (
         (None, {'fields': ('phone', 'password')}),
-        ('Personal Info', {'fields': ('first_name', 'last_name', 'username', 'email', 'profile_picture', 'bio')}),
+        ('Personal Info', {'fields': ('first_name', 'last_name', 'username', 'email', 'profile_picture', 'bio', 'subscription')}),
         ('Permissions', {'fields': ('role' ,'is_active','is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important Dates', {'fields': ('last_login', 'date_joined')}),
     )
 
     add_fieldsets = (
         (None, {'fields': ('phone', 'password1', 'password2')}),
-        ('Personal Info', {'fields': ('first_name', 'last_name', 'username', 'email')}),
+        ('Personal Info', {'fields': ('first_name', 'last_name', 'username', 'email', 'subscription')}),
         ('Permissions', {'fields': ( 'role' ,'is_active','is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important Dates', {'fields': ('last_login', 'date_joined')}),
     )

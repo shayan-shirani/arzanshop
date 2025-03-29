@@ -1,4 +1,5 @@
 from apps.shop.models import Product, Discount
+from apps.orders.models import Subscription
 
 class Cart:
     def __init__(self, request):
@@ -53,6 +54,10 @@ class Cart:
         if not discount.is_valid():
             return 0
         return discount.value / 100 * self.get_total_price()
+
+    def subscription_amount(self, subscription_type):
+        subscriptions = Subscription.objects.get(types=subscription_type)
+        return subscriptions.sub_discount / 100 * self.get_total_price()
 
     def get_post_price(self):
         weight = sum(item['weight'] * item['quantity'] for item in self.cart.values())

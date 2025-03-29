@@ -35,7 +35,7 @@ class CartViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def add(self, request):
         cart = Cart(request)
-        CartService.add_to_cart(cart, request.data.get('product_id'))
+        CartService.add_to_cart(cart, request.data.get('product'))
         return Response({'message': 'Product added'}, status=status.HTTP_200_OK)
 
     @extend_schema(

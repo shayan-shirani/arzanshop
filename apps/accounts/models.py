@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
-# Create your models here.
+
 class ShopUserManager(BaseUserManager):
     def create_user(self, username, phone, email , password=None, **extra_fields):
         if not username:

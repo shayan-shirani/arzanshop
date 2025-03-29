@@ -5,3 +5,6 @@ def get_all_addresses():
 
 def get_address_by_user(user):
     return Addresses.objects.filter(user=user)
+
+def get_address_by_id(id):
+    return Addresses.objects.get(id=id)

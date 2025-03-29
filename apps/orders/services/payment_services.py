@@ -14,11 +14,9 @@ class PaymentService:
             'amount': amount,
             'callback': f"http://127.0.0.1:8000/api/orders/payment/callback/?type={'order' if isinstance(obj, Order) else 'subscription'}",
         }
-        print(payload, 'service payload')
         response = requests.post(PAYMENT_URL, json=payload)
-        print(response, 'service response')
         data = response.json()
-        print(data, 'service data')
+
         if data.get('status') == 'success':
             transid = data.get('transid')
             obj.transaction_id = transid

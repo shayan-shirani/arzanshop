@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apps.accounts.selectors.address_selectors import get_address_by_id
 from .selectors.subscription_selectors import get_subscription_by_user
 
-from .models import *
+from .models import Order, OrderItem, Product, Addresses
 from apps.cart.cart import Cart
 from apps.orders.models import Subscription
 
@@ -56,12 +56,10 @@ class OrderSerializer(serializers.ModelSerializer):
         if session_discount == serialized_discount:
             discount_code = session_discount
             discount_amount = cart.get_discount_amount()
-
         elif not serialized_discount and Subscription.objects.filter(user=user).exists():
             subscription = get_subscription_by_user(user)
             discount_code = subscription.plan
             discount_amount = cart.subscription_amount(subscription)
-
         else:
             discount_code = None
             discount_amount = 0
@@ -85,6 +83,7 @@ class OrderSerializer(serializers.ModelSerializer):
             )
 
         return order
+
 
 class SubscriptionSerializer(serializers.Serializer):
     subscription_type = serializers.CharField()

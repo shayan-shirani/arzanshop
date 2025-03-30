@@ -20,7 +20,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShopUser
-        fields = ('first_name', 'last_name', 'username', 'phone', 'email', 'password', 'profile_picture')
+        fields = ['first_name', 'last_name', 'username', 'phone', 'email', 'password', 'profile_picture']
         extra_kwargs = {
             'password': {'write_only': True},
         }
@@ -28,10 +28,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def validate_phone(self, value):
 
         if not value.isdigit():
-            raise ValidationError({'detail': 'Phone number must be entered in numbers'})
+            raise ValidationError({'error': 'Phone number must be entered in numbers'})
 
         if len(value) != 11:
-            raise ValidationError({'detail': 'Phone number must be 11 digits'})
+            raise ValidationError({'error': 'Phone number must be 11 digits'})
 
         return value
 
@@ -58,7 +58,7 @@ class VendorProfileSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
 
         if hasattr(user, 'vendor_profile'):
-            raise ValidationError({'detail': 'You have already requested a vendor profile'})
+            raise ValidationError({'error': 'You have already requested a vendor profile'})
 
         return data
 
@@ -73,13 +73,13 @@ class ShopUserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShopUser
-        fields = ('id','first_name', 'last_name', 'username', 'email' ,'role','is_active','is_superuser', 'is_staff' ,'date_joined','addresses', 'vendor_profile')
+        fields = ['id','first_name', 'last_name', 'username', 'email' ,'role','is_active','is_superuser', 'is_staff' ,'date_joined','addresses', 'vendor_profile']
 
 
 class ShopUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopUser
-        fields = ('id', 'first_name')
+        fields = ['id', 'first_name']
 
 
 class LoginSerializer(serializers.Serializer):
@@ -98,13 +98,16 @@ class PasswordChangeSerializer(serializers.Serializer):
 
     def validate_old_password(self, value):
         user = self.context['request'].user
+
         if not user.check_password(value):
-            raise ValidationError({'detail': 'Old password is incorrect'})
+            raise ValidationError({'error': 'Old password is incorrect'})
+
         return value
 
     def validate(self, data):
         if data['new_password'] != data['confirm_password']:
-            raise ValidationError({'detail': 'Passwords do not match'})
+            raise ValidationError({'error': 'Passwords do not match'})
+
         return data
 
     def update(self, instance, validated_data):

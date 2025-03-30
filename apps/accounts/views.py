@@ -1,27 +1,115 @@
-from rest_framework import viewsets, views, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
-from rest_framework_simplejwt.exceptions import TokenError
 from django.core.cache import cache
 
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
+from rest_framework import viewsets, views, status
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser
+from rest_framework.response import Response
+from rest_framework_simplejwt.exceptions import TokenError
+
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiResponse,
+)
 from drf_spectacular.types import OpenApiTypes
 
-from .selectors.user_selectors import get_all_users, get_user_by_id, get_user_by_phone, get_user_by_email, get_user_by_uidb64
+from .swagger.user_schema import (
+    USER_ID_PARAMETER,
+    DUPLICATE_USER_EXAMPLES,
+    INVALID_ID_EXAMPLES,
+    ALL_ERROR_EXAMPLES
+)
+
+from .selectors.user_selectors import (
+    get_all_users,
+    get_user_by_id,
+    get_user_by_phone,
+    get_user_by_email,
+    get_user_by_uidb64,
+)
 from .selectors.address_selectors import get_all_addresses, get_address_by_user
-from .selectors.vendor_selectors import get_all_vendors, get_vendor_by_user, get_vendor_by_pk_status
+from .selectors.vendor_selectors import (
+    get_all_vendors,
+    get_vendor_by_user,
+    get_vendor_by_pk_status,
+)
 
 from .services.jwt import JwtService
 from .services.password_reset_services import PasswordResetService
 from .services.login_services import validate_username, generate_request_id
 
 from .permissions import *
+
 from .serializers import *
 
+
+@extend_schema_view(
+    list=extend_schema(
+        summary='List all users',
+        description='Retrieve the list of all registered users.',
+        responses={200: ShopUserSerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        parameters=[USER_ID_PARAMETER],
+        summary='Retrieve a specific user',
+        description='Get details of a specific user by their ID.',
+        responses={200: ShopUserDetailSerializer},
+    ),
+    create=extend_schema(
+        summary='Create a new user',
+        description='Register a new user by providing necessary details.',
+        request=UserRegistrationSerializer,
+        responses={
+            201: UserRegistrationSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=DUPLICATE_USER_EXAMPLES,
+            )
+        },
+    ),
+    update=extend_schema(
+        summary='Update user details',
+        description='Update information of an existing user.',
+        parameters=[USER_ID_PARAMETER],
+        request=UserRegistrationSerializer,
+        responses={
+            200: UserRegistrationSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=ALL_ERROR_EXAMPLES
+            )
+        },
+    ),
+    partial_update=extend_schema(
+        summary='Partially update user details',
+        description='Update only a subset of fields for an existing user.',
+        parameters=[USER_ID_PARAMETER],
+        request=UserRegistrationSerializer,
+        responses={
+            200: UserRegistrationSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=ALL_ERROR_EXAMPLES
+            )
+        },
+    ),
+    destroy=extend_schema(
+        summary='Delete a user',
+        description='Delete an existing user by their ID.',
+        parameters=[USER_ID_PARAMETER],
+        responses={
+            204: OpenApiResponse(description='No Content'),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=INVALID_ID_EXAMPLES,
+            )
+        },
+    ),
+)
 class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsUserOrAdmin]
-
+    parser_classes = [MultiPartParser]
     def get_queryset(self):
         user = self.request.user
 
@@ -43,7 +131,67 @@ class UserViewSet(viewsets.ModelViewSet):
         else:
             return ShopUserDetailSerializer
 
-
+@extend_schema_view(
+    list=extend_schema(
+        summary='List all addresses',
+        description='Retrieve the list of all addresses associated with the user.',
+        responses={200: AddressSerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        parameters=[USER_ID_PARAMETER],
+        summary='Retrieve a specific address',
+        description='Get details of a specific address by their ID.',
+        responses={
+            200: OpenApiResponse(description='No Content'),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=INVALID_ID_EXAMPLES,
+            )
+        }
+    ),
+    create=extend_schema(
+        summary='Create a new address',
+        description='Create a new address for the user.',
+        request=AddressSerializer,
+        responses={201: AddressSerializer},
+    ),
+    update=extend_schema(
+        parameters=[USER_ID_PARAMETER],
+        summary='Update an address',
+        description='Update information of an existing address.',
+        responses={
+            200: OpenApiResponse(description='No Content'),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=INVALID_ID_EXAMPLES,
+            )
+        }
+    ),
+    partial_update=extend_schema(
+        parameters=[USER_ID_PARAMETER],
+        summary='Partially update an address',
+        description='Update only a subset of fields for an existing address.',
+        responses={
+            200: OpenApiResponse(description='No Content'),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=INVALID_ID_EXAMPLES,
+            )
+        }
+    ),
+    destroy=extend_schema(
+        parameters=[USER_ID_PARAMETER],
+        summary='Delete an address',
+        description='Delete an existing address by their ID.',
+        responses={
+            200: OpenApiResponse(description='No Content'),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=INVALID_ID_EXAMPLES,
+            )
+        }
+    )
+)
 class AddressViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = AddressSerializer
@@ -73,8 +221,6 @@ class AddressViewSet(viewsets.ModelViewSet):
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
-
-
 
 
 class ChangePasswordView(views.APIView):

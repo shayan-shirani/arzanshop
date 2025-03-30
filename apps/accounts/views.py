@@ -20,6 +20,10 @@ from .swagger.user_schema import (
     INVALID_ID_EXAMPLES,
     ALL_ERROR_EXAMPLES
 )
+from .swagger.password_schema import (
+    PASSWORD_CHANGE_ERRORS,
+    PASSWORD_CHANGE_SUCCESS_EXAMPLES
+)
 
 from .selectors.user_selectors import (
     get_all_users,
@@ -227,11 +231,25 @@ class ChangePasswordView(views.APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        summary='Change User Password',
+        description="""
+            Allows an authenticated user to change their password.
+            The user must provide their current password and a new password.
+            If successful, the user's tokens will be blacklisted.
+        """,
         request=PasswordChangeSerializer,
         responses={
-            200: OpenApiResponse(description='Password changed successfully'),
-            400: OpenApiResponse(description='Passwords do not match'),
-        }
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description='Password changed successfully',
+                examples=PASSWORD_CHANGE_SUCCESS_EXAMPLES
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description='Invalid input',
+                examples=PASSWORD_CHANGE_ERRORS,
+            ),
+        },
     )
     def post(self, request):
         serializer = PasswordChangeSerializer(

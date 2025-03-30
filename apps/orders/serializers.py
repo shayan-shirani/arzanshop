@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from .services.orders_service import *
+from apps.accounts.selectors.address_selectors import get_address_by_id
+from .selectors.subscription_selectors import get_subscription_by_user
 
 from .models import *
 from apps.cart.cart import Cart
@@ -41,9 +42,49 @@ class OrderSerializer(serializers.ModelSerializer):
         request = self.context['request']
         user = request.user
         cart = Cart(request)
-        order_service = OrderService(user, cart)
-        return order_service.create_order(validated_data)
 
+        address_id = validated_data.pop('address_id', None)
+
+        try:
+            address = get_address_by_id(address_id)
+        except Addresses.DoesNotExist:
+            raise serializers.ValidationError('Address not found')
+
+        session_discount = request.session.get('discount_code', None)
+        serialized_discount = validated_data.pop('discount_code', None)
+
+        if session_discount == serialized_discount:
+            discount_code = session_discount
+            discount_amount = cart.get_discount_amount()
+
+        elif not serialized_discount and Subscription.objects.filter(user=user).exists():
+            subscription = get_subscription_by_user(user)
+            discount_code = subscription.plan
+            discount_amount = cart.subscription_amount(subscription)
+
+        else:
+            discount_code = None
+            discount_amount = 0
+
+        order = Order.objects.create(
+            buyer=user,
+            address=address,
+            discount_code=discount_code,
+            discount_amount=discount_amount,
+            **validated_data
+        )
+
+        for item in cart:
+            product = item['product']
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                price=item['price'],
+                quantity=item['quantity'],
+                weight=item['weight'],
+            )
+
+        return order
 
 class SubscriptionSerializer(serializers.Serializer):
     subscription_type = serializers.CharField()

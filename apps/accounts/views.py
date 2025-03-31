@@ -35,6 +35,16 @@ from .swagger.logout_schema import (
     LOGOUT_SUCCESS_EXAMPLE,
     LOGOUT_ERROR_EXAMPLE
 )
+from .swagger.vendor_schema import (
+    VENDOR_REJECT,
+    VENDOR_APPROVE,
+    VENDOR_NOT_FOUND
+)
+from .swagger.login_schema import (
+    PASSWORD_OTP_EXAMPLE,
+    INVALID_EMAIL_PHONE_EXAMPLE,
+    LOGIN_VERIFY_ERROR_EXAMPLES
+)
 
 from .selectors.user_selectors import (
     get_all_users,
@@ -43,7 +53,7 @@ from .selectors.user_selectors import (
     get_user_by_email,
     get_user_by_uidb64,
 )
-from .selectors.address_selectors import get_all_addresses, get_address_by_user
+from .selectors.address_selectors import get_address_by_user
 from .selectors.vendor_selectors import (
     get_all_vendors,
     get_vendor_by_user,
@@ -125,6 +135,7 @@ from .serializers import *
 class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsUserOrAdmin]
     parser_classes = [MultiPartParser]
+
     def get_queryset(self):
         user = self.request.user
 
@@ -447,9 +458,111 @@ class LogoutView(views.APIView):
             )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary='List All Vendor Profiles',
+        description="Retrieve the list of all vendor profiles based on the user's permissions.",
+        responses={
+            200: VendorProfileSerializer(many=True),
+        },
+    ),
+    retrieve=extend_schema(
+        summary='Retrieve Vendor Profile',
+        description='Retrieve the details of a specific vendor profile.',
+        responses={
+            200: OpenApiResponse(
+                description='Vendor profile details',
+                response=VendorProfileSerializer()
+            ),
+            404: OpenApiResponse(
+                description='Vendor profile not found.',
+                response=OpenApiTypes.OBJECT,
+                examples=VENDOR_NOT_FOUND,
+            ),
+        },
+    ),
+    create=extend_schema(
+        summary='Create Vendor Profile',
+        description="Creating a vendor profile. Requires store name and it's description"
+    ),
+    update=extend_schema(
+        summary='Update Vendor Profile',
+        description='Updating a vendor profile. Only accessible by admin or the user.',
+        request=VendorProfileSerializer,
+        responses={
+            200: VendorProfileSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=VENDOR_NOT_FOUND
+            )
+        },
+    ),
+    partial_update=extend_schema(
+        summary='Partially update Vendor Profile',
+        description='Update only a subset of fields. Only accessible by admin or the user.',
+        request=VendorProfileSerializer,
+        responses={
+            200: VendorProfileSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=VENDOR_NOT_FOUND
+            )
+        },
+    ),
+    destroy=extend_schema(
+        summary='Delete Vendor Profile',
+        description='Delete a vendor profile. Only accessible by admin or the user.',
+        responses={
+            204: OpenApiResponse(description='No Content'),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=VENDOR_NOT_FOUND
+            )
+        },
+    ),
+    approve=extend_schema(
+        summary='Approve Vendor Profile',
+        description='Approve a pending vendor profile. Only accessible by admin users.',
+        request=None,
+        responses={
+            200: OpenApiResponse(
+                description='Vendor profile approved successfully.',
+                response=OpenApiTypes.OBJECT,
+                examples=VENDOR_APPROVE,
+            ),
+            404: OpenApiResponse(
+                description='Vendor profile not found.',
+                response=OpenApiTypes.OBJECT,
+                examples=VENDOR_NOT_FOUND,
+            ),
+        },
+    ),
+    reject=extend_schema(
+        summary='Reject Vendor Profile',
+        description='Reject a pending vendor profile. Only accessible by admin users.',
+        request=None,
+        responses={
+            200: OpenApiResponse(
+                description='Vendor profile rejected successfully.',
+                response=OpenApiTypes.OBJECT,
+                examples=VENDOR_REJECT,
+            ),
+            404: OpenApiResponse(
+                description='Vendor profile not found.',
+                response=OpenApiTypes.OBJECT,
+                examples=VENDOR_NOT_FOUND,
+            ),
+        },
+    )
+)
 class VendorProfileViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
     serializer_class = VendorProfileSerializer
+
+    def get_permissions(self):
+        if self.action in ['approve', 'reject']:
+            return [IsAdminUser()]
+        else:
+            return [IsUserOrAdmin()]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -464,7 +577,7 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
 
         return get_vendor_by_user(user)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         try:
             vendor = get_vendor_by_pk_status(pk, 'pending')
@@ -478,7 +591,7 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         try:
             vendor = get_vendor_by_pk_status(pk, 'pending')
@@ -498,7 +611,27 @@ class LoginRequest(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
-    @extend_schema(request=LoginSerializer)
+    @extend_schema(
+        summary='Login Request',
+        description="""
+            Accepts a username (email or phone number) to initiate a login request.
+            - If the username is recognized as an email, prompts the user to enter their password.
+            - If the username is recognized as a phone number, initiates OTP sending to their email and phone.
+        """,
+        request=LoginSerializer,
+        responses={
+            200: OpenApiResponse(
+                description="Successful login initiation.",
+                response=OpenApiTypes.OBJECT,
+                examples=PASSWORD_OTP_EXAMPLE
+            ),
+            400: OpenApiResponse(
+                description="Invalid username (email or phone).",
+                response=OpenApiTypes.OBJECT,
+                examples=INVALID_EMAIL_PHONE_EXAMPLE
+            )
+        },
+    )
     def post(self, request):
         username = request.data.get('username')
         username_type = validate_username(username)
@@ -532,7 +665,24 @@ class LoginVerify(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
-    @extend_schema(request=LoginVerifySerializer)
+    @extend_schema(
+        summary='Login Verification',
+        description="""
+            Verifies a login operation based on the `request_id` and `password` values. 
+            Depending on the context:
+            - If the `request_id` is associated with an email (password verification is used).
+            - If the `request_id` is associated with a phone number (OTP verification is used).
+        """,
+        request=LoginVerifySerializer,
+        responses={
+            200: LoginVerifySerializer,
+            400: OpenApiResponse(
+                description="Authentication failure or invalid input",
+                response=OpenApiTypes.OBJECT,
+                examples=LOGIN_VERIFY_ERROR_EXAMPLES
+            )
+        },
+    )
     def post(self, request):
         request_id = request.data.get('request_id')
         stored_email = cache.get(f'user_email:{request_id}')

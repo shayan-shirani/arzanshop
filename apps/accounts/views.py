@@ -22,7 +22,18 @@ from .swagger.user_schema import (
 )
 from .swagger.password_schema import (
     PASSWORD_CHANGE_ERRORS,
-    PASSWORD_CHANGE_SUCCESS_EXAMPLES
+    PASSWORD_CHANGE_SUCCESS_EXAMPLES,
+    PASSWORD_RESET_REQUEST_SUCCESS_EXAMPLE,
+    PASSWORD_RESET_REQUEST_MISSING_EMAIL_EXAMPLE,
+    PASSWORD_RESET_REQUEST_USER_NOT_FOUND_EXAMPLE,
+    PASSWORD_RESET_SUCCESS_EXAMPLE,
+    PASSWORD_RESET_VALIDATION,
+    PASSWORD_RESET_INVALID_UID_EXAMPLE,
+    PASSWORD_RESET_PARAMETERS
+)
+from .swagger.logout_schema import (
+    LOGOUT_SUCCESS_EXAMPLE,
+    LOGOUT_ERROR_EXAMPLE
 )
 
 from .selectors.user_selectors import (
@@ -277,11 +288,29 @@ class PasswordResetRequestView(views.APIView):
     authentication_classes = []
 
     @extend_schema(
+        summary="Request Password Reset",
+        description="""
+            Allows unauthenticated users to request a password reset. 
+            The user must provide a valid email address associated with their account. 
+            If the email is valid, a password reset token will be generated and emailed to the user.
+        """,
         request=PasswordResetRequestSerializer,
         responses={
-            200: OpenApiResponse(description='Reset password email sent successfully'),
-            400: OpenApiResponse(description='User not found')
-        }
+            200: OpenApiResponse(
+                description="Password reset request processed successfully.",
+                examples=PASSWORD_RESET_REQUEST_SUCCESS_EXAMPLE,
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Invalid input. Missing or invalid email.",
+                examples=PASSWORD_RESET_REQUEST_MISSING_EMAIL_EXAMPLE
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="User with the provided email not found.",
+                examples=PASSWORD_RESET_REQUEST_USER_NOT_FOUND_EXAMPLE
+            ),
+        },
     )
     def post(self, request):
         email = request.data.get('email')
@@ -317,19 +346,46 @@ class PasswordResetView(views.APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
+    @extend_schema(
+        summary='Reset Password',
+        description="""
+            Allows unauthenticated users to reset their password using the `uidb64` and `token`
+            sent during the password reset request. A valid token and UID must be provided,
+            along with the new password in the request body.
+        """,
+        parameters=PASSWORD_RESET_PARAMETERS,
+        request=PasswordResetSerializer,
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description='Password reset successfully.',
+                examples=PASSWORD_RESET_SUCCESS_EXAMPLE,
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description='Bad Request. Invalid Token, UID, or Password Validation Error.',
+                examples=PASSWORD_RESET_VALIDATION
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description='Invalid UID or user not found.',
+                examples=PASSWORD_RESET_INVALID_UID_EXAMPLE,
+            ),
+        }
+    )
     def post(self, request, uidb64, token):
         try:
             user = get_user_by_uidb64(uidb64)
         except (TypeError, ValueError, OverflowError, ShopUser.DoesNotExist):
             raise ValueError(
-                "Invalid UID or user not found."
+                'Invalid UID or user not found.'
             )
 
         stored_token = cache.get(f'reset_password_token:{user.pk}')
 
         if not stored_token or stored_token != token:
             return Response(
-                {'detail': 'Invalid or expired token.'},
+                {'error': 'Invalid or expired token.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -346,10 +402,29 @@ class PasswordResetView(views.APIView):
         )
 
 
-
 class LogoutView(views.APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary='Logout User',
+        description="""
+            Logout the currently authenticated user by invalidating their refresh token.
+            The `refresh` token must be included in the request body.
+        """,
+        request=LoginSerializer,
+        responses={
+            205: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Successful logout response",
+                examples=LOGOUT_SUCCESS_EXAMPLE
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Failed logout due to missing or invalid token",
+                examples=LOGOUT_ERROR_EXAMPLE
+            )
+        }
+    )
     def post(self, request):
         refresh_token = request.data.get('refresh')
 

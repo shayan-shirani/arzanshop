@@ -1,5 +1,4 @@
 from apps.shop.models import Product, Discount
-from apps.orders.models import Subscription
 
 class Cart:
     def __init__(self, request):
@@ -38,12 +37,12 @@ class Cart:
         try:
             discount = Discount.objects.get(code=code)
         except Discount.DoesNotExist:
-            return {'detail': 'Invalid discount code'}
+            return {'error': 'Invalid discount code'}
         if not discount.is_valid():
-            return {'detail': 'This discount code has expired'}
+            return {'error': 'This discount code has expired'}
         self.session['discount_code'] = code
         self.save()
-        return {'detail': 'discount code Successfully applied'}
+        return {'message': 'discount code Successfully applied'}
 
     def get_discount_amount(self):
         code = self.session.get('discount_code')

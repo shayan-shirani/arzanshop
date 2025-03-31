@@ -467,6 +467,7 @@ class LogoutView(views.APIView):
         },
     ),
     retrieve=extend_schema(
+        parameters=[USER_ID_PARAMETER],
         summary='Retrieve Vendor Profile',
         description='Retrieve the details of a specific vendor profile.',
         responses={
@@ -486,6 +487,7 @@ class LogoutView(views.APIView):
         description="Creating a vendor profile. Requires store name and it's description"
     ),
     update=extend_schema(
+        parameters=[USER_ID_PARAMETER],
         summary='Update Vendor Profile',
         description='Updating a vendor profile. Only accessible by admin or the user.',
         request=VendorProfileSerializer,
@@ -498,6 +500,7 @@ class LogoutView(views.APIView):
         },
     ),
     partial_update=extend_schema(
+        parameters=[USER_ID_PARAMETER],
         summary='Partially update Vendor Profile',
         description='Update only a subset of fields. Only accessible by admin or the user.',
         request=VendorProfileSerializer,
@@ -510,6 +513,7 @@ class LogoutView(views.APIView):
         },
     ),
     destroy=extend_schema(
+        parameters=[USER_ID_PARAMETER],
         summary='Delete Vendor Profile',
         description='Delete a vendor profile. Only accessible by admin or the user.',
         responses={
@@ -521,6 +525,7 @@ class LogoutView(views.APIView):
         },
     ),
     approve=extend_schema(
+        parameters=[USER_ID_PARAMETER],
         summary='Approve Vendor Profile',
         description='Approve a pending vendor profile. Only accessible by admin users.',
         request=None,
@@ -538,6 +543,7 @@ class LogoutView(views.APIView):
         },
     ),
     reject=extend_schema(
+        parameters=[USER_ID_PARAMETER],
         summary='Reject Vendor Profile',
         description='Reject a pending vendor profile. Only accessible by admin users.',
         request=None,

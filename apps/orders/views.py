@@ -1,60 +1,93 @@
-from rest_framework import views, generics, status
+from drf_spectacular.types import OpenApiTypes
+from rest_framework import views, viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+
+from .schema import ORDER_CREATE_ERROR_EXAMPLES
 
 from .serializers import *
 
-from .selectors.subscription_selectors import get_all_subscription
+from .selectors.order_selectors import get_all_orders, filter_orders_by_user
+from .selectors.subscription_selectors import get_all_subscription, filter_subscription_by_user
 
 from .services.payment_services import *
 
-
-class OrderCreateView(generics.CreateAPIView):
+class OrderViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = OrderSerializer
-    queryset = Order.objects.all()
+    queryset = get_all_orders()
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['request'] = self.request
-        return context
+    @extend_schema(
+        summary='List orders',
+        description='Retrieve the list of orders for a user.',
+        responses={200: OrderSerializer(many=True)},
+    )
+    def list(self, request):
+        orders = filter_orders_by_user(request.user)
+        serializer = OrderSerializer(orders, many=True)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary='Create order',
+        description='Create an order for a user.',
+        request=OrderCreateSerializer,
+        responses={
+            201: OrderCreateSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description='Payment failed.',
+                examples=ORDER_CREATE_ERROR_EXAMPLES
+            )
+        }
+    )
+    def create(self, request):
+        serializer = OrderCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
-        amount = order.get_final_cost()
+        amount = order.total_price
         data = PaymentService.pay_request(amount, order)
 
-        if data:
-            return Response(data, status=status.HTTP_201_CREATED)
-
-        return Response({'error': 'Failed to initiate payment'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
-class SubscriptionBuyView(generics.CreateAPIView):
+class SubscriptionViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = SubscriptionSerializer
     queryset = get_all_subscription()
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['user'] = self.request.user
-        return context
+    @extend_schema(
+        summary='List subscriptions',
+        description='Retrieve the list of subscriptions for a user.',
+        responses={200: SubscriptionSerializer(many=True)},
+    )
+    def list(self, request):
+        subscription = filter_subscription_by_user(request.user)
+        serializer = SubscriptionSerializer(subscription, many=True)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary='Create subscription',
+        description='Create a subscription for a user.',
+        request=SubscriptionCreateSerializer,
+        responses={
+            201: SubscriptionCreateSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description='Payment failed.',
+                examples=ORDER_CREATE_ERROR_EXAMPLES
+            )
+        }
+    )
+    def create(self, request):
+        serializer = SubscriptionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         subscription = serializer.save()
         amount = subscription.price
         data = PaymentService.pay_request(amount, subscription)
 
-        if data:
-            return Response(data, status=status.HTTP_201_CREATED)
-
-        return Response({'error': 'Failed to initiate payment'}, status=status.HTTP_400_BAD_REQUEST)
-
+        return Response(data, status=status.HTTP_201_CREATED)
 
 class PaymentCallbackView(views.APIView):
     def post(self, request):

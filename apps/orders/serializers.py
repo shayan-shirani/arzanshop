@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from drf_spectacular.utils import extend_schema_field
+
 from apps.accounts.selectors.address_selectors import get_address_by_id
 from .selectors.subscription_selectors import get_subscription_by_user
 
@@ -14,7 +16,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ['order', 'product' , 'price' , 'quantity', 'weight']
 
 
-class OrderSerializer(serializers.ModelSerializer):
+class OrderCreateSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     address_id = serializers.IntegerField(write_only=True)
     total_cost = serializers.SerializerMethodField()
@@ -29,12 +31,15 @@ class OrderSerializer(serializers.ModelSerializer):
             'created', 'updated', 'discount_code', 'total_cost', 'post_cost', 'final_cost'
         ]
 
+    @extend_schema_field(serializers.IntegerField())
     def get_total_cost(self, obj):
         return obj.get_total_cost()
 
+    @extend_schema_field(serializers.IntegerField())
     def get_post_cost(self, obj):
         return obj.get_post_cost()
 
+    @extend_schema_field(serializers.IntegerField())
     def get_final_cost(self, obj):
         return obj.get_final_cost()
 
@@ -85,11 +90,45 @@ class OrderSerializer(serializers.ModelSerializer):
         return order
 
 
-class SubscriptionSerializer(serializers.Serializer):
-    subscription_type = serializers.CharField()
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    total_cost = serializers.SerializerMethodField()
+    post_cost = serializers.SerializerMethodField()
+    final_cost = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'address', 'first_name', 'last_name', 'phone',
+            'items', 'created', 'total_cost',
+            'post_cost', 'final_cost'
+        ]
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_total_cost(self, obj):
+        return obj.get_total_cost()
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_post_cost(self, obj):
+        return obj.get_post_cost()
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_final_cost(self, obj):
+        return obj.get_final_cost()
+
+
+class SubscriptionCreateSerializer(serializers.Serializer):
+    subscription_plan = serializers.CharField()
 
     def create(self, validated_data):
         user = self.context['request'].user
-        subscription_type = validated_data['subscription_type']
-        subscription = Subscription.objects.create(user=user, plan=subscription_type)
+        subscription_plan = validated_data['subscription_plan']
+        subscription = Subscription.objects.create(user=user, plan=subscription_plan)
         return subscription
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    class Meta:
+        model = Subscription
+        fields = '__all__'

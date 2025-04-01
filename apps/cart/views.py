@@ -124,46 +124,49 @@ class CartViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
     authentication_classes = []
 
-
     def list(self, request):
         cart = Cart(request)
         serializer = CartSerializer(cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=False, methods=['post'])
     def add(self, request):
+        serializer = CartActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.validated_data.get('product')
         cart = Cart(request)
-        CartService.add_to_cart(cart, request.data.get('product'))
+        CartService.add_to_cart(cart, product)
         return Response({'message': 'Product added'}, status=status.HTTP_200_OK)
 
-
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=False, methods=['post'])
     def decrease(self, request):
+        serializer = CartActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.validated_data.get('product')
         cart = Cart(request)
-        CartService.decrease_product_quantity(cart, request.data.get('product_id'))
+        CartService.decrease_product_quantity(cart, product)
         return Response({'message': 'Product decreased'}, status=status.HTTP_200_OK)
 
-
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=False, methods=['post'])
     def remove(self, request):
+        serializer = CartActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.validated_data.get('product')
         cart = Cart(request)
-        CartService.remove_from_cart(cart, request.data.get('product_id'))
+        CartService.remove_from_cart(cart, product)
         return Response({'message': 'Product removed'}, status=status.HTTP_200_OK)
 
-
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=False, methods=['post'])
     def clear(self,request):
         cart = Cart(request)
         cart.clear()
         return Response({'message': 'Cart cleared'}, status=status.HTTP_200_OK)
 
-
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=False, methods=['post'])
     def apply_discount(self, request):
-        code = request.data.get('code')
-        if not code:
-            return Response({'error': 'No discount code provided'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = DiscountSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        code = serializer.validated_data.get('code')
         cart = Cart(request)
         result = cart.apply_discount(code)
         return Response(result, status=status.HTTP_200_OK)

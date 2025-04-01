@@ -1,5 +1,8 @@
 from rest_framework import serializers
+
+from drf_spectacular.utils import extend_schema_field
 from taggit.serializers import TagListSerializerField, TaggitSerializer
+
 from apps.shop.models import Product, Category
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -9,6 +12,7 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ['parent','name']
 
+    @extend_schema_field(serializers.IntegerField())
     def get_parent(self, obj):
         return obj.parent.name if obj.parent else None
 

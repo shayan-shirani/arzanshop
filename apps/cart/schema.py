@@ -35,7 +35,7 @@ CART_CLEAR_EXAMPLES = [
 CART_APPLY_DISCOUNT_EXAMPLES = [
     OpenApiExample(
         name='Discount Applied Successfully',
-        value={'message': 'Discount applied', 'discount': 20.00},
+        value={'message': 'discount code Successfully applied'},
         description='Response when a discount is successfully applied to the cart.'
     )
 ]
@@ -51,7 +51,7 @@ CART_APPLY_DISCOUNT_ERROR_EXAMPLES = [
 CART_ERROR_EXAMPLES = [
     OpenApiExample(
         name='Product Not Found',
-        value={'error': 'Product not found'},
+        value={'error': 'Product does not exist'},
         description='Response when a product ID is not found in the cart.'
     )
 ]

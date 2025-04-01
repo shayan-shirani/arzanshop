@@ -5,3 +5,6 @@ def get_all_subscription():
 
 def get_subscription_by_user(user):
     return Subscription.objects.get(user=user)
+
+def filter_subscription_by_user(user):
+    return Subscription.objects.filter(user=user)

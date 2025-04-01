@@ -299,7 +299,8 @@ class PasswordResetRequestView(views.APIView):
     authentication_classes = []
 
     @extend_schema(
-        summary="Request Password Reset",
+        operation_id='password_reset_request',
+        summary='Request Password Reset',
         description="""
             Allows unauthenticated users to request a password reset. 
             The user must provide a valid email address associated with their account. 
@@ -308,17 +309,17 @@ class PasswordResetRequestView(views.APIView):
         request=PasswordResetRequestSerializer,
         responses={
             200: OpenApiResponse(
-                description="Password reset request processed successfully.",
+                description='Password reset request processed successfully.',
                 examples=PASSWORD_RESET_REQUEST_SUCCESS_EXAMPLE,
             ),
             400: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
-                description="Invalid input. Missing or invalid email.",
+                description='Invalid input. Missing or invalid email.',
                 examples=PASSWORD_RESET_REQUEST_MISSING_EMAIL_EXAMPLE
             ),
             404: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
-                description="User with the provided email not found.",
+                description='User with the provided email not found.',
                 examples=PASSWORD_RESET_REQUEST_USER_NOT_FOUND_EXAMPLE
             ),
         },
@@ -358,6 +359,7 @@ class PasswordResetView(views.APIView):
     authentication_classes = []
 
     @extend_schema(
+        operation_id='password_reset_confirm',
         summary='Reset Password',
         description="""
             Allows unauthenticated users to reset their password using the `uidb64` and `token`

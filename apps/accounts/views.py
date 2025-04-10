@@ -48,12 +48,12 @@ from .swagger.login_schema import (
 
 from .selectors.user_selectors import (
     get_all_users,
-    get_user_by_id,
+    filter_user_by_id,
     get_user_by_phone,
     get_user_by_email,
     get_user_by_uidb64,
 )
-from .selectors.address_selectors import get_address_by_user
+from .selectors.address_selectors import filter_address_by_user
 from .selectors.vendor_selectors import (
     get_all_vendors,
     get_vendor_by_user,
@@ -79,7 +79,13 @@ from .serializers import *
         parameters=[USER_ID_PARAMETER],
         summary='Retrieve a specific user',
         description='Get details of a specific user by their ID.',
-        responses={200: ShopUserDetailSerializer},
+        responses={
+            200: ShopUserDetailSerializer,
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=INVALID_ID_EXAMPLES,
+            )
+        },
     ),
     create=extend_schema(
         summary='Create a new user',
@@ -133,8 +139,13 @@ from .serializers import *
     ),
 )
 class UserViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsUserOrAdmin]
     parser_classes = [MultiPartParser]
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        else:
+            return [IsAuthenticated(), IsUserOrAdmin()]
 
     def get_queryset(self):
         user = self.request.user
@@ -142,7 +153,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if user.is_staff or user.is_superuser:
             return get_all_users()
 
-        return get_user_by_id(user.id)
+        return filter_user_by_id(user.id)
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -223,7 +234,7 @@ class AddressViewSet(viewsets.ModelViewSet):
     serializer_class = AddressSerializer
 
     def get_queryset(self):
-        return get_address_by_user(self.request.user)
+        return filter_address_by_user(self.request.user)
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -569,8 +580,10 @@ class VendorProfileViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['approve', 'reject']:
             return [IsAdminUser()]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsUserOrAdmin()]
         else:
-            return [IsUserOrAdmin()]
+            return [AllowAny()]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

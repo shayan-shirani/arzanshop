@@ -79,7 +79,6 @@ class Addresses(models.Model):
         return f'{self.street}, {self.city}, {self.country}'
 
     class Meta:
-        unique_together = ('user', 'is_default')
         verbose_name = 'Address'
         verbose_name_plural = 'Addresses'
 

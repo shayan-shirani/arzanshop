@@ -2,7 +2,7 @@ import pytest
 
 from apps.accounts.serializers import UserRegistrationSerializer
 
-from .conftest import api_factory, validate_user
+from apps.accounts.tests.conftest import api_factory, validate_user
 
 
 @pytest.mark.django_db

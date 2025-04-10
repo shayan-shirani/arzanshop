@@ -1,8 +1,12 @@
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, APIClient
 
 import pytest
 
 from apps.accounts.tests.factories import ShopUserFactory, AddressFactory, VendorProfileFactory
+
+@pytest.fixture
+def api_client():
+    return APIClient()
 
 @pytest.fixture
 def api_factory():

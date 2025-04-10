@@ -4,7 +4,7 @@ from apps.accounts.serializers import AddressSerializer
 
 from apps.accounts.models import Addresses
 
-from .conftest import (
+from apps.accounts.tests.conftest import (
     api_factory,
     validate_user,
     validate_address,

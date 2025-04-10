@@ -4,7 +4,7 @@ from apps.accounts.serializers import VendorProfileSerializer
 
 from apps.accounts.models import VendorProfile
 
-from .conftest import (
+from apps.accounts.tests.conftest import (
     api_factory,
     user_factory,
     vendor_factory,

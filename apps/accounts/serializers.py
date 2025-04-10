@@ -55,10 +55,12 @@ class VendorProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'status', 'is_active']
 
     def validate(self, data):
-        user = self.context['request'].user
+        request = self.context['request']
+        user = request.user
 
-        if hasattr(user, 'vendor_profile'):
-            raise ValidationError({'error': 'You have already requested a vendor profile'})
+        if request.method == 'POST':
+            if hasattr(user, 'vendor_profile'):
+                raise ValidationError({'error': 'You have already requested a vendor profile'})
 
         return data
 
@@ -124,7 +126,7 @@ class PasswordResetSerializer(serializers.Serializer):
 
     def validate(self, data):
         if data['new_password'] != data['new_password_confirm']:
-            raise ValidationError({'detail': 'Passwords do not match'})
+            raise ValidationError({'error': 'Passwords do not match'})
         return data
 
     def update(self, instance, validated_data):

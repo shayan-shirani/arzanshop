@@ -16,6 +16,8 @@ class ShopUserFactory(factory.django.DjangoModelFactory):
     email = factory.Faker('email')
     phone = factory.LazyFunction(lambda: fake.random_number(digits=5, fix_len=True))
     role = ShopUser.Roles.Customer
+    is_staff = False
+    is_superuser = False
     is_active = True
 
 class AddressFactory(factory.django.DjangoModelFactory):
@@ -29,6 +31,12 @@ class AddressFactory(factory.django.DjangoModelFactory):
     country = factory.Faker('country')
     zip_code = factory.LazyFunction(lambda: int(fake.random_number(digits=5, fix_len=True)))
     is_default = True
+
+    @classmethod
+    def create_batch_with_default(cls, size, **kwargs):
+        addresses = cls.create_batch(size - 1, is_default=False, **kwargs)
+        addresses.append(cls(is_default=True, **kwargs))
+        return addresses
 
 
 class VendorProfileFactory(factory.django.DjangoModelFactory):

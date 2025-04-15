@@ -8,10 +8,7 @@ import pytest
 
 from apps.accounts.tests.conftest import (
     api_client,
-    address_factory,
-    validate_address,
     user_factory,
-    vendor_factory,
     validate_vendor
 )
 from apps.accounts.tests.factories import VendorProfileFactory, ShopUserFactory

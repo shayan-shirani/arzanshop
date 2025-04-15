@@ -14,7 +14,7 @@ class ShopUserFactory(factory.django.DjangoModelFactory):
     username = factory.Faker('user_name')
     password = factory.Faker('password')
     email = factory.Faker('email')
-    phone = factory.LazyFunction(lambda: fake.random_number(digits=5, fix_len=True))
+    phone = factory.LazyFunction(lambda: f'0913{fake.random_number(digits=7, fix_len=True)}')
     role = ShopUser.Roles.Customer
     is_staff = False
     is_superuser = False

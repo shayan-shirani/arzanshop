@@ -39,7 +39,7 @@ def validate_user():
         'first_name': 'John',
         'last_name': 'Doe',
         'username': 'johndoe',
-        'phone': '12345678901',
+        'phone': '09134566879',
         'email': 'johndoe@example.com',
         'password': 'securepassword123',
     }

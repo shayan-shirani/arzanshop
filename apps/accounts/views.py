@@ -284,7 +284,7 @@ class ChangePasswordView(views.APIView):
             ),
         },
     )
-    def post(self, request):
+    def put(self, request):
         serializer = PasswordChangeSerializer(
             data=request.data,
             context={'request': request}
@@ -397,7 +397,7 @@ class PasswordResetView(views.APIView):
             ),
         }
     )
-    def post(self, request, uidb64, token):
+    def put(self, request, uidb64, token):
         try:
             user = get_user_by_uidb64(uidb64)
         except (TypeError, ValueError, OverflowError, ShopUser.DoesNotExist):
@@ -415,9 +415,11 @@ class PasswordResetView(views.APIView):
 
         serializer = PasswordResetSerializer(data=request.data)
 
-        if serializer.is_valid():
-            serializer.update(user, serializer.validated_data)
-            JwtService.token_blacklist(user)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.update(user, serializer.validated_data)
+        JwtService.token_blacklist(user)
 
         cache.delete(f'password_reset_token:{user.pk}')
         return Response(
@@ -654,7 +656,12 @@ class LoginRequest(views.APIView):
         },
     )
     def post(self, request):
-        username = request.data.get('username')
+        serializer = LoginSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        username = serializer.validated_data['username']
         username_type = validate_username(username)
         request_id = generate_request_id()
 
@@ -681,6 +688,7 @@ class LoginRequest(views.APIView):
             except ShopUser.DoesNotExist:
                 return Response({'error': 'Invalid phone number'}, status=status.HTTP_400_BAD_REQUEST)
 
+        return Response({'error': 'Invalid username'}, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginVerify(views.APIView):
     permission_classes = [AllowAny]

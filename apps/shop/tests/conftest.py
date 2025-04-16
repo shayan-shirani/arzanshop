@@ -5,7 +5,11 @@ import pytest
 from apps.accounts.models import ShopUser, VendorProfile
 
 from apps.accounts.tests.factories import ShopUserFactory, VendorProfileFactory
-from apps.shop.tests.factories import ProductFactory, ParentCategoryFactory, CategoryFactory
+from apps.shop.tests.factories import (
+    ProductFactory,
+    ParentCategoryFactory,
+    CategoryFactory,
+)
 
 
 @pytest.fixture

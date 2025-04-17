@@ -123,7 +123,7 @@ class SubscriptionCreateSerializer(serializers.Serializer):
     def create(self, validated_data):
         user = self.context['request'].user
         subscription_plan = validated_data['subscription_plan']
-        subscription = Subscription.objects.create(user=user, plan=subscription_plan)
+        subscription = Subscription.objects.create(buyer=user, plan=subscription_plan)
         return subscription
 
 

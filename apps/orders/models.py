@@ -71,7 +71,7 @@ class Subscription(models.Model):
         MONTHLY = 1000, '1000'
         YEARLY = 2000, '2000'
 
-    user = models.OneToOneField(ShopUser, on_delete=models.CASCADE, related_name='subscription')
+    buyer = models.OneToOneField(ShopUser, on_delete=models.CASCADE, related_name='subscription')
     plan = models.CharField(max_length=10, choices=PlanType.choices)
     price = models.PositiveIntegerField(choices=PlanPrice.choices, editable=False)
     paid = models.BooleanField(default=False)

@@ -43,10 +43,10 @@ class OrderViewSet(viewsets.ViewSet):
         }
     )
     def create(self, request):
-        serializer = OrderCreateSerializer(data=request.data)
+        serializer = OrderCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
-        amount = order.total_price
+        amount = order.get_total_cost()
         data = PaymentService.pay_request(amount, order)
 
         return Response(data, status=status.HTTP_201_CREATED)
@@ -81,7 +81,7 @@ class SubscriptionViewSet(viewsets.ViewSet):
         }
     )
     def create(self, request):
-        serializer = SubscriptionCreateSerializer(data=request.data)
+        serializer = SubscriptionCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         subscription = serializer.save()
         amount = subscription.price

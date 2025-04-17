@@ -22,14 +22,14 @@ The purpose of this project is to demonstrate my knowledge of backend developmen
 - **Docker** -> Used to containerize the application for easy deployment.
 - **Pytest** -> Framework for testing the application.
 - **Django Filters** -> Package used for filtering.
-- **Swagger** -> For documenting APIs
+- **Swagger** -> For documenting APIs.
 
 ## Features
 - ✨ **Multi-Vendor Support**  
-Allows vendors to sign up and add products
+Allows vendors to sign up and add products.
 
 - 🛒 **Product Management**  
-Enables vendors to create, update, and delete their products
+Enables vendors to create, update, and delete their products.
 
 - 🔑 **User Authentication**  
 A full authentication system was integrated with JWT

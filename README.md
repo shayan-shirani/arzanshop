@@ -8,22 +8,23 @@
 - [Running Locally](#running-locally)
 - [Testing](#testing)
 - [API Documentation](#api-documentation)
-- [Contributing](#contributing)
-- [License](#license)
-# About
+
+## About
 ArzanShop is a backend multi-vendor e-commerce project.
-It enables customers to browse through and buy various products related to different categories.Morover, Vendors are able to sign up and put their products on sale and manage their pruducts.
+It enables customers to browse through and buy various products related to different categories. Moreover, Vendors are able to sign up and put their products on sale and manage their products.
 The purpose of this project is to demonstrate my knowledge of backend development as my first project.
-# Tech Stack
+
+## Tech Stack
 - **Django** -> Web framework used for building the backend.
 - **Django Rest Framework** -> Framework for creating API.
-- **Postgresql** -> Database used in the project.Well known for it's compatibility with django.
+- **Postgresql** -> Database used in the project. Well known for its compatibility with django.
 - **Redis** -> Key-Value Database used for caching.
 - **Docker** -> Used to containerize the application for easy deployment.
 - **Pytest** -> Framework for testing the application.
 - **Django Filters** -> Package used for filtering.
 - **Swagger** -> For documenting APIs
-# Features
+
+## Features
 - ✨ **Multi-Vendor Support**  
 Allows vendors to sign up and add products
 
@@ -45,7 +46,7 @@ Customers can place orders.
 - 📜 **Swagger API Documentation**  
 Automatically generated, interactive API documentation via Swagger, accessible at `/api/docs/` for testing and reference.
 
-# Installation
+## Installation
 
 To install and set up the project locally, follow these steps:
 
@@ -62,7 +63,7 @@ To install and set up the project locally, follow these steps:
 
 3. The application will be available at `http://localhost:8000`.
 
-# Running Locally
+## Running Locally
 
 To run the project locally without Docker:
 
@@ -90,7 +91,7 @@ To run the project locally without Docker:
 
 ---
 
-# Testing
+## Testing
 
 To run the tests with **Pytest**, simply run:
 
@@ -100,7 +101,7 @@ pytest
 
 ---
 
-# **API Documentation**  
+## API Documentation  
 The project uses Swagger to automatically generate API documentation.  
 - To view the API documentation, visit:
 http://localhost:8000/api/docs/

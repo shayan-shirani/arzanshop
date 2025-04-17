@@ -36,7 +36,7 @@ class Order(models.Model):
         return price
 
     def __str__(self):
-        return f"order {self.id}"
+        return f'order {self.id}'
 
     class Meta:
         ordering = ['-created']
@@ -46,8 +46,8 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, related_name="items", on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, related_name="order_items", on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, related_name='order_items', on_delete=models.CASCADE)
     price = models.PositiveIntegerField(default=0)
     quantity = models.PositiveIntegerField(default=1)
     weight = models.PositiveIntegerField(default=0)
@@ -109,5 +109,5 @@ class Subscription(models.Model):
         return 0
 
     def __str__(self):
-        return f"{self.user.username} - {self.get_plan_display()} - {self.price} (Active: {self.is_active})"
+        return f'{self.user.username} - {self.get_plan_display()} - {self.price} (Active: {self.is_active})'
 

@@ -23,4 +23,4 @@ def test_create_shop_user():
 def test_create_shop_user_with_invalid_phone_length():
     with pytest.raises(DataError) as excinfo:
         ShopUserFactory(phone='0913225489789726')
-    assert "value too long for type character varying(11)" in str(excinfo.value).lower()
+    assert 'value too long for type character varying(11)' in str(excinfo.value).lower()
